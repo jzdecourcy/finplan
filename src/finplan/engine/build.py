@@ -11,7 +11,9 @@ from finplan.markets.deterministic import DeterministicMarket
 from finplan.model.accounts import Account, AccountType
 from finplan.model.events import Event
 from finplan.model.household import FilingStatus, Household, Person
+from finplan.model.refs import RefContext
 from finplan.model.streams import ExpenseStream, IncomeStream
+from finplan.ss.pia import compute_pia_monthly
 from finplan.taxes.types import FlatTaxStub, TaxEngine
 
 
@@ -28,6 +30,61 @@ def build_household(cfg: ScenarioConfig) -> Household:
         for p in cfg.household.people
     ]
     return Household(people=people, filing_status=FilingStatus(cfg.household.filing_status))
+
+
+def _income_streams(cfg: ScenarioConfig) -> list[IncomeStream]:
+    return [
+        IncomeStream(
+            id=s.id, annual=s.annual, start=s.start, end=s.end,
+            growth_real=s.growth_real, owner=s.owner, kind=s.kind,
+            taxable=s.taxable, fica=s.fica, phantom=s.phantom,
+        )
+        for s in cfg.income
+    ]
+
+
+def derived_pias(cfg: ScenarioConfig) -> dict[str, float]:
+    """Recomputed monthly PIAs (today's dollars) for people with an ss_earnings_history.
+
+    Historical years before sim.start_year come from the SSA record; sim years through
+    each stream's own end (e.g. `end: retirement`) are projected from the person's
+    FICA-taxable income streams in start-year real dollars, capped at the current SS
+    wage base — so scenarios that retire earlier automatically insert zero years.
+    """
+    with_history = [p for p in cfg.household.people if p.ss_earnings_history]
+    if not with_history:
+        return {}
+    people = cfg.household.people
+    ctx = RefContext(
+        birth_years={p.name: p.birth_year for p in people},
+        retirement_years={
+            p.name: p.birth_year + p.retirement_age
+            for p in people if p.retirement_age is not None
+        },
+        horizon_year=max(p.birth_year + p.life_expectancy_age for p in people),
+    )
+    wage_base = None
+    if cfg.taxes.regime == "us_federal":
+        from finplan.taxes.params import load_federal  # noqa: PLC0415
+
+        wage_base = load_federal(cfg.taxes.base_params_year)["fica"]["ss_wage_base"]
+    incomes = _income_streams(cfg)
+    out = {}
+    for p in with_history:
+        earnings = {
+            int(y): float(v) for y, v in p.ss_earnings_history.items()
+            if int(y) < cfg.sim.start_year
+        }
+        for year in range(cfg.sim.start_year, ctx.horizon_year + 1):
+            covered = sum(
+                s.amount_in(year, s.ctx_for(ctx), cpi_factor=1.0)
+                for s in incomes
+                if s.owner == p.name and s.fica and not s.phantom
+            )
+            if covered > 0:
+                earnings[year] = min(covered, wage_base) if wage_base else covered
+        out[p.name] = compute_pia_monthly(earnings, p.birth_year)
+    return out
 
 
 def _account_template(cfg: ScenarioConfig) -> list[Account]:
@@ -85,17 +142,13 @@ def build_market(cfg: ScenarioConfig, mode: str):
 
 def build_simulation(cfg: ScenarioConfig) -> Simulation:
     template = _account_template(cfg)
+    household = build_household(cfg)
+    for name, pia in derived_pias(cfg).items():
+        household.person(name).ss_pia_monthly = pia
     return Simulation(
         cfg=cfg,
-        household=build_household(cfg),
-        incomes=[
-            IncomeStream(
-                id=s.id, annual=s.annual, start=s.start, end=s.end,
-                growth_real=s.growth_real, owner=s.owner, kind=s.kind,
-                taxable=s.taxable, fica=s.fica, phantom=s.phantom,
-            )
-            for s in cfg.income
-        ],
+        household=household,
+        incomes=_income_streams(cfg),
         expenses=[
             ExpenseStream(
                 id=s.id, annual=s.annual, start=s.start, end=s.end,

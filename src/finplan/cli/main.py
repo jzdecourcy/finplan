@@ -40,6 +40,13 @@ def validate(files: tuple[str, ...]) -> None:
                f"{len(cfg.expenses)} expense streams, {len(cfg.events)} events)")
     if snap:
         click.echo(f"balances from snapshot: {snap}")
+    from finplan.engine.build import derived_pias  # noqa: PLC0415
+
+    for name, pia in derived_pias(cfg).items():
+        entered = next(p.ss_pia_monthly for p in cfg.household.people if p.name == name)
+        note = f" (replaces entered ${entered:,.0f})" if entered else ""
+        click.echo(f"recomputed SS PIA from earnings history: {name} "
+                   f"${pia:,.2f}/mo in today's dollars{note}")
 
 
 @cli.command("show-config")

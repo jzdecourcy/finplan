@@ -33,6 +33,12 @@ class PersonCfg(StrictModel):
     retirement_age: int | None = None
     ss_claim_age: int | None = None
     ss_pia_monthly: float | None = None
+    # Nominal covered earnings by calendar year, from the ssa.gov earnings record.
+    # When present, the engine RECOMPUTES the PIA at build time: these years (before
+    # sim.start_year) plus projected FICA-taxable income streams through retirement,
+    # so retire-early scenarios automatically get the lower benefit. Overrides
+    # ss_pia_monthly. Entries at/after sim.start_year are ignored (streams win).
+    ss_earnings_history: dict[int, float] | None = None
     life_expectancy_age: int = 95
 
 
@@ -267,4 +273,11 @@ class ScenarioConfig(StrictModel):
         aca_streams = [e.id for e in self.expenses if e.aca]
         if len(aca_streams) > 1:
             raise ValueError(f"at most one expense stream may set aca: true; got {aca_streams}")
+        for p in self.household.people:
+            if p.ss_earnings_history and self.sim.start_year - p.birth_year >= 62:
+                raise ValueError(
+                    f"person {p.name!r}: ss_earnings_history recompute only supports people "
+                    f"under 62 at sim start (today's-dollars convention has no COLA chain); "
+                    f"enter ss_pia_monthly directly instead"
+                )
         return self
