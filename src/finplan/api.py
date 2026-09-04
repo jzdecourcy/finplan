@@ -33,9 +33,11 @@ def run_scenario(
         )
         try:
             from finplan.report.charts import load_snapshot_history, net_worth_chart
+            from finplan.report.pdf import write_pdf_report
 
-            net_worth_chart(results, out / "net_worth.png",
-                            actuals=load_snapshot_history())
+            actuals = load_snapshot_history()
+            net_worth_chart(results, out / "net_worth.png", actuals=actuals)
+            write_pdf_report(results, cfg, out / "report.pdf", actuals=actuals)
         except Exception:  # charts are best-effort; the data files are the record
             pass
     return results
