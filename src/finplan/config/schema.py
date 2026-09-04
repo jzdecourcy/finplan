@@ -48,7 +48,7 @@ class HouseholdCfg(StrictModel):
 
 
 _YIELD_KEYS = {"interest", "us_gov_interest", "muni_interest",
-               "qualified_dividends", "ordinary_dividends"}
+               "qualified_dividends", "ordinary_dividends", "ltcg_distributions"}
 
 
 class AccountCfg(StrictModel):

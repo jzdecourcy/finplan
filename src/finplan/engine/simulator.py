@@ -157,14 +157,16 @@ class Simulation:
             # captures total return). Cash accounts: the full return IS taxable interest.
             year_returns = paths.year_returns(path_idx, i)
             inv = {"interest": 0.0, "us_gov_interest": 0.0, "muni_interest": 0.0,
-                   "qualified_dividends": 0.0, "ordinary_dividends": 0.0}
+                   "qualified_dividends": 0.0, "ordinary_dividends": 0.0,
+                   "ltcg_distributions": 0.0}
             for acct in state.accounts:
                 if acct.type is AccountType.TAXABLE and acct.yields:
                     for cat, rate in acct.yields.items():
                         dollars = acct.balance * rate
                         inv[cat] += dollars
                         acct.cost_basis += dollars   # reinvested distributions add basis
-                        led.interest_dividends += dollars
+                        if cat != "ltcg_distributions":  # LTCG lands in realized_ltcg
+                            led.interest_dividends += dollars
                 elif acct.type is AccountType.CASH:
                     dollars = acct.balance * max(0.0, year_returns.get("cash", 0.0))
                     inv["interest"] += dollars
@@ -221,6 +223,9 @@ class Simulation:
                 tax_exempt_interest=inv["muni_interest"],
                 ordinary_dividends=inv["ordinary_dividends"],
                 qualified_dividends=inv["qualified_dividends"],
+                # fund cap-gain distributions: recognized annually as LTCG (reinvested,
+                # basis already stepped up above); withdrawal gains stack on top
+                realized_ltcg=inv["ltcg_distributions"],
                 traditional_distributions=rmd_total,
                 ss_benefits=led.ss_benefits,
                 mi_529_contributions=planned.mi_529_deductible,
@@ -289,7 +294,10 @@ class Simulation:
                 led.marginal_rate_ordinary, _ = self.tax_engine.marginals(final_inp)
             else:
                 led.marginal_rate_ordinary = funding.tax.marginal_rate_ordinary
-            led.realized_ltcg = sum(w.realized_ltcg for w in funding.withdrawals.values())
+            led.realized_ltcg = (
+                inv["ltcg_distributions"]
+                + sum(w.realized_ltcg for w in funding.withdrawals.values())
+            )
             led.withdrawals_total = funding.total_withdrawn + education_from_529 + rmd_total
             led.shortfall_unfunded = funding.unfunded
             if funding.unfunded > 1.0:
