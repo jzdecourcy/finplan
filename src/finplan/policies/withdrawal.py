@@ -24,11 +24,26 @@ from __future__ import annotations
 from dataclasses import dataclass, field, replace
 
 from finplan.model.accounts import Account, AccountType, WithdrawalResult
+from finplan.model.household import Household
 from finplan.model.state import SimState
 from finplan.taxes.types import TaxEngine, TaxInput, TaxResult
 
 _TOLERANCE = 1.0
 _MAX_ITER = 25
+
+
+def rule_of_55_applies(acct: Account, household: Household, year: int) -> bool:
+    """Penalty exception for employer-plan withdrawals after separating at 55+.
+
+    The account flag marks eligibility (held at the sponsoring employer); the law's
+    condition — separation from service in or after the calendar year the owner turns
+    55 — is checked here against the owner's modeled retirement year.
+    """
+    if not acct.rule_of_55 or acct.owner is None:
+        return False
+    p = household.person(acct.owner)
+    ry = p.retirement_year
+    return ry is not None and year >= ry and ry - p.birth_year >= 55
 
 
 @dataclass
@@ -82,7 +97,14 @@ class WithdrawalPolicy:
                     break
                 owner_age = ages.get(acct.owner) if acct.owner else max(ages.values())
                 qualified = acct.type not in (AccountType.HSA, AccountType.PLAN_529)
-                res = acct.withdraw(gap, owner_age=owner_age, qualified=qualified)
+                res = acct.withdraw(
+                    gap,
+                    owner_age=owner_age,
+                    qualified=qualified,
+                    penalty_exempt=rule_of_55_applies(
+                        acct, state.household, tax_input.year
+                    ),
+                )
                 if res.amount > 0:
                     took_any = True
                     prev = result.withdrawals.setdefault(acct.id, WithdrawalResult())

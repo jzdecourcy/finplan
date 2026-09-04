@@ -5,6 +5,7 @@ ORDERING CONTRACT (correctness-critical; do not reorder without updating golden 
   2. events               one-time cash in/out at this year's price level
   3. income + payroll     streams, Social Security; pre-tax deferrals/match/529 out of wages
   4. RMDs                 forced traditional distributions from PRIOR Dec-31 balances
+  4b. 72(t) SEPP          forced penalty-free traditional distributions, fixed nominal
   5. Roth conversions     policy sees income-so-far, so bracket-fill is honest
   6. spending             expense streams; education needs draw 529s first (qualified)
   7. fund the gap         tax-aware gross-up loop (withdraw -> retax -> repeat);
@@ -108,6 +109,7 @@ class Simulation:
         prior_eoy_traditional = {
             a.id: a.balance for a in state.accounts if a.type is AccountType.TRADITIONAL
         }
+        sepp_start_cpi: dict[str, float] = {}   # account id -> CPI at first SEPP payment
         ledgers: list[YearLedger] = []
         cpi = 1.0
         years = self.years()
@@ -190,6 +192,29 @@ class Simulation:
                     rmd_total += res.amount
             led.rmd = rmd_total
 
+            # 4b. 72(t) SEPP: forced penalty-free distributions. Fixed NOMINAL at the
+            # first payment's price level (SEPP payments don't index), running from
+            # `start` through the later of 5 payments or the year the owner reaches
+            # 59.5 (integer-age convention: age-59 year is the last penalized one).
+            sepp_total = 0.0
+            for plan in cfg.policies.sepp:
+                start_year = resolve(plan.start, ctx)
+                if year < start_year:
+                    continue
+                acct = state.account(plan.account)
+                owner = hh.person(acct.owner)
+                if year > max(start_year + 4, owner.birth_year + 59):
+                    continue
+                if plan.account not in sepp_start_cpi:
+                    sepp_start_cpi[plan.account] = cpi
+                res = acct.withdraw(
+                    plan.annual * sepp_start_cpi[plan.account],
+                    owner_age=ages[acct.owner],
+                    penalty_exempt=True,
+                )
+                sepp_total += res.amount
+            led.sepp = sepp_total
+
             # ACA premium tax credit inputs: the flagged stream's nominal amount is
             # the benchmark (SLCSP proxy); zero outside coverage years => inactive.
             aca_premium = 0.0
@@ -226,7 +251,7 @@ class Simulation:
                 # fund cap-gain distributions: recognized annually as LTCG (reinvested,
                 # basis already stepped up above); withdrawal gains stack on top
                 realized_ltcg=inv["ltcg_distributions"],
-                traditional_distributions=rmd_total,
+                traditional_distributions=rmd_total + sepp_total,
                 ss_benefits=led.ss_benefits,
                 mi_529_contributions=planned.mi_529_deductible,
                 aca_benchmark_premium=aca_premium,
@@ -271,7 +296,8 @@ class Simulation:
             # 7-8. fund the gap; final tax
             inflows = (
                 (led.wages - planned.wage_reduction)
-                + led.other_income + led.ss_benefits + led.event_cash_in + rmd_total
+                + led.other_income + led.ss_benefits + led.event_cash_in
+                + rmd_total + sepp_total
             )
             base_need = (
                 general_spend + (education_out - education_from_529)
@@ -298,7 +324,9 @@ class Simulation:
                 inv["ltcg_distributions"]
                 + sum(w.realized_ltcg for w in funding.withdrawals.values())
             )
-            led.withdrawals_total = funding.total_withdrawn + education_from_529 + rmd_total
+            led.withdrawals_total = (
+                funding.total_withdrawn + education_from_529 + rmd_total + sepp_total
+            )
             led.shortfall_unfunded = funding.unfunded
             if funding.unfunded > 1.0:
                 led.failed = True

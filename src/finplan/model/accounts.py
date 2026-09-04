@@ -34,6 +34,12 @@ class Account:
     allocation: dict[str, float] = field(default_factory=lambda: {"stocks": 0.6, "bonds": 0.4})
     beneficiary: str | None = None      # 529 only
     yields: dict[str, float] | None = None  # taxable only: annual yield by tax character
+    # Employer-plan (401k/403b) accounts only: eligible for the rule-of-55 penalty
+    # exception IF the owner separates from service in or after the year they turn 55.
+    # The withdrawal policy checks the separation-age condition; this flag only marks
+    # the account as held at the sponsoring employer (the rule never covers IRAs or
+    # old rolled-over plans).
+    rule_of_55: bool = False
 
     def deposit(self, amount: float, *, is_basis: bool = True) -> None:
         assert amount >= 0
@@ -42,12 +48,19 @@ class Account:
             self.cost_basis += amount
 
     def withdraw(
-        self, amount: float, *, owner_age: int | None = None, qualified: bool = True
+        self,
+        amount: float,
+        *,
+        owner_age: int | None = None,
+        qualified: bool = True,
+        penalty_exempt: bool = False,
     ) -> WithdrawalResult:
         """Withdraw up to `amount`; returns the tax character of what came out.
 
         `qualified` marks 529/HSA withdrawals matched to qualified expenses. Early-withdrawal
         penalties are only *flagged* here (penalty_base); the tax engine prices them.
+        `penalty_exempt` (rule of 55, 72(t) SEPP) suppresses the flag — the money is still
+        taxed as it otherwise would be, just not penalized.
         """
         take = min(amount, self.balance)
         if take <= 0:
@@ -65,7 +78,7 @@ class Account:
             self.cost_basis -= basis_out
         elif t is AccountType.TRADITIONAL:
             res.ordinary_income = take
-            if owner_age is not None and owner_age < 59.5:
+            if owner_age is not None and owner_age < 59.5 and not penalty_exempt:
                 res.penalty_base = take
         elif t is AccountType.ROTH:
             # Contribution basis comes out first, tax/penalty-free; earnings after.
@@ -78,7 +91,8 @@ class Account:
                     res.tax_free += earnings_out
                 else:
                     res.ordinary_income = earnings_out
-                    res.penalty_base = earnings_out
+                    if not penalty_exempt:
+                        res.penalty_base = earnings_out
         elif t in (AccountType.HSA, AccountType.PLAN_529):
             if qualified:
                 res.tax_free = take

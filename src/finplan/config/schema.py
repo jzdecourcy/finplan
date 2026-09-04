@@ -63,6 +63,11 @@ class AccountCfg(StrictModel):
     # (e.g. {qualified_dividends: 0.015}). Reinvested + taxed annually. Cash accounts
     # are taxed automatically on their full return - no yields entry needed.
     yields: dict[str, float] | None = None
+    # Employer plans (401k/403b) held at the sponsoring employer at separation:
+    # withdrawals are penalty-exempt if the owner separates in or after the year
+    # they turn 55 (the engine checks the age condition; the flag marks eligibility).
+    # Never true for IRAs or plans that would be rolled over before withdrawing.
+    rule_of_55: bool = False
 
     @model_validator(mode="after")
     def _check_yields(self):
@@ -71,6 +76,13 @@ class AccountCfg(StrictModel):
             if bad:
                 raise ValueError(f"account {self.id!r}: unknown yield keys {sorted(bad)}; "
                                  f"allowed: {sorted(_YIELD_KEYS)}")
+        if self.rule_of_55:
+            if self.type not in ("traditional", "roth"):
+                raise ValueError(f"account {self.id!r}: rule_of_55 only applies to "
+                                 f"traditional/roth employer plans")
+            if self.owner is None:
+                raise ValueError(f"account {self.id!r}: rule_of_55 requires an owner "
+                                 f"(the separation-age check needs their birth year)")
         return self
 
 
@@ -172,6 +184,19 @@ class RothConversionPolicyCfg(StrictModel):
         return self
 
 
+class SeppPlanCfg(StrictModel):
+    # 72(t) substantially-equal-periodic-payment plan: a forced, penalty-free,
+    # fixed-NOMINAL annual distribution from one traditional account. `annual` is in
+    # start-year real dollars; it converts to nominal at the plan's first payment and
+    # stays flat (SEPP payments don't index). Payments run from `start` through the
+    # later of 5 payments or the year the owner reaches 59.5 — the IRS minimum; the
+    # engine models stopping as soon as allowed. The payment AMOUNT must be computed
+    # outside the model (IRS methods, 120% mid-term AFR cap) — CPA territory.
+    account: str
+    annual: float
+    start: YearRefT
+
+
 class RebalancePolicyCfg(StrictModel):
     type: Literal["none", "annual_to_target"] = "none"
 
@@ -181,6 +206,7 @@ class PoliciesCfg(StrictModel):
     withdrawal: WithdrawalPolicyCfg = WithdrawalPolicyCfg()
     contribution: ContributionPolicyCfg = ContributionPolicyCfg()
     roth_conversion: RothConversionPolicyCfg = RothConversionPolicyCfg()
+    sepp: list[SeppPlanCfg] = []
     rebalance: RebalancePolicyCfg = RebalancePolicyCfg()
 
 
@@ -270,6 +296,19 @@ class ScenarioConfig(StrictModel):
         ids = [a.id for a in self.accounts]
         if len(ids) != len(set(ids)):
             raise ValueError("duplicate account ids")
+        accounts_by_id = {a.id: a for a in self.accounts}
+        sepp_accounts = [s.account for s in self.policies.sepp]
+        if len(sepp_accounts) != len(set(sepp_accounts)):
+            raise ValueError("multiple sepp plans on the same account")
+        for s in self.policies.sepp:
+            acct = accounts_by_id.get(s.account)
+            if acct is None:
+                raise ValueError(f"sepp plan: unknown account {s.account!r}")
+            if acct.type != "traditional":
+                raise ValueError(f"sepp plan on {s.account!r}: account must be traditional")
+            if acct.owner is None:
+                raise ValueError(f"sepp plan on {s.account!r}: account needs an owner "
+                                 f"(payment duration depends on their age)")
         aca_streams = [e.id for e in self.expenses if e.aca]
         if len(aca_streams) > 1:
             raise ValueError(f"at most one expense stream may set aca: true; got {aca_streams}")

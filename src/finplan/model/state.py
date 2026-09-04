@@ -22,6 +22,7 @@ class YearLedger:
 
     # forced / elective tax events
     rmd: float = 0.0
+    sepp: float = 0.0                  # 72(t) SEPP distributions (penalty-free ordinary)
     roth_conversion: float = 0.0
 
     # outflows

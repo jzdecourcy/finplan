@@ -112,6 +112,7 @@ def _account_template(cfg: ScenarioConfig) -> list[Account]:
                 allocation=allocation,
                 beneficiary=a.beneficiary,
                 yields=a.yields,
+                rule_of_55=a.rule_of_55,
             )
         )
     return accounts

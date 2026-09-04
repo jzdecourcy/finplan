@@ -9,6 +9,21 @@ household:
     - { name: sam, retirement_age: 55 }
     - { name: riley, retirement_age: 55 }
 
+accounts:
+  # Separating at 55+ from the plan's sponsoring employer makes withdrawals from THAT
+  # plan penalty-free (rule of 55). Never set it on an IRA or a plan you'd roll over
+  # first; the engine still checks the separation-age condition against retirement_age.
+  - { id: 401k-sam-trad, rule_of_55: true }
+
 expenses:
   # Pre-Medicare bridge; flag `aca: true` to model the ACA premium tax credit
   - { id: pre-medicare-health, annual: 22000, start: retirement, end: "age:sam:65" }
+
+# The other pre-59.5 penalty exception, for money the rule of 55 can't reach (IRAs,
+# rolled-over plans): a 72(t) SEPP — forced, penalty-free, fixed-NOMINAL annual
+# distributions running until 5 payments or age 59.5, whichever is later. Breaking the
+# schedule retroactively penalizes every payment, and the amount comes from the IRS
+# methods (120% mid-term AFR cap), so compute it with a CPA rather than guessing:
+# policies:
+#   sepp:
+#     - { account: rollover-ira-sam, annual: 24000, start: retirement }
