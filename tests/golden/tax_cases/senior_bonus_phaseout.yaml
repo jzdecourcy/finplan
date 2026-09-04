@@ -1,0 +1,14 @@
+name: senior-bonus-phaseout
+source: >-
+  Schedule 1-A Part V (OBBBA s151(d)(5)) + Rev. Proc. 2025-32. Single, 70: standard
+  deduction 16,100 + 2,050 (65+) = 18,150; senior bonus 6,000 - 6% x (100,000 - 75,000)
+  = 4,500. Taxable 100,000 - 22,650 = 77,350. Tax: 5,800 + 22% x 26,950 = 11,729.
+params_year: 2026
+input:
+  filing_status: single
+  ages: { p0: 70 }
+  other_ordinary: 100000
+expected:
+  taxable_income: 77350
+  federal: 11729
+tolerance: 1.0

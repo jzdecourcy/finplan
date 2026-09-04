@@ -1,0 +1,12 @@
+name: pub915-single-50pct-band
+source: "IRS Pub 915 (2025), filled-in Worksheet 1, p. 7"
+params_year: 2026
+input:
+  filing_status: single
+  ages: { p0: 68 }
+  ss_benefits: 5980
+  other_ordinary: 28990
+expected:
+  taxable_ss: 2990
+  agi: 31980
+tolerance: 1.0

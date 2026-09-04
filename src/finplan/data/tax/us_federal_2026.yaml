@@ -1,0 +1,111 @@
+# US federal tax parameters, TAX YEAR 2026. Values verified against primary sources
+# 2026-09-03 — see `sources` at bottom. Do not edit without a cited source + green
+# golden tests (tests/golden/).
+year: 2026
+
+ordinary_brackets:            # Rev. Proc. 2025-32 § 3.01
+  single:
+    - { upto: 12400, rate: 0.10 }
+    - { upto: 50400, rate: 0.12 }
+    - { upto: 105700, rate: 0.22 }
+    - { upto: 201775, rate: 0.24 }
+    - { upto: 256225, rate: 0.32 }
+    - { upto: 640600, rate: 0.35 }
+    - { upto: null, rate: 0.37 }
+  mfj:
+    - { upto: 24800, rate: 0.10 }
+    - { upto: 100800, rate: 0.12 }
+    - { upto: 211400, rate: 0.22 }
+    - { upto: 403550, rate: 0.24 }
+    - { upto: 512450, rate: 0.32 }
+    - { upto: 768700, rate: 0.35 }
+    - { upto: null, rate: 0.37 }
+
+ltcg_brackets:                # Rev. Proc. 2025-32 § 3.03 (0% / 15% / 20% breakpoints)
+  single:
+    - { upto: 49450, rate: 0.00 }
+    - { upto: 545500, rate: 0.15 }
+    - { upto: null, rate: 0.20 }
+  mfj:
+    - { upto: 98900, rate: 0.00 }
+    - { upto: 613700, rate: 0.15 }
+    - { upto: null, rate: 0.20 }
+
+standard_deduction:           # Rev. Proc. 2025-32 § 3.14(1), § 3.14(3)
+  single: 16100
+  mfj: 32200
+  extra_65_single: 2050       # per condition (age 65+), unmarried
+  extra_65_mfj: 1650          # per condition per spouse, married
+  senior_bonus:               # OBBBA IRC § 151(d)(5): $6,000/person 65+, 2025-2028 only,
+    amount: 6000              # unindexed; phaseout 6% of MAGI over threshold, computed on
+    phaseout_rate: 0.06       # household MAGI and applied per qualifying person
+    magi_threshold_single: 75000
+    magi_threshold_mfj: 150000
+    expires_after: 2028
+
+niit:                         # § 1411 via 2025 Form 8960 instructions; statutory, unindexed
+  rate: 0.038
+  threshold_single: 200000
+  threshold_mfj: 250000
+
+fica:                         # IRS Pub 15 (2026)
+  ss_rate: 0.062
+  ss_wage_base: 184500
+  medicare_rate: 0.0145
+  addl_medicare:              # return-level thresholds (Topic 560); statutory, unindexed
+    rate: 0.009
+    threshold_single: 200000
+    threshold_mfj: 250000
+
+ss_taxation:                  # Pub 915 Worksheet 1; statutory, unindexed
+  thresholds_single: [25000, 34000]
+  thresholds_mfj: [32000, 44000]
+
+limits:                       # Notice 2025-67; HSA: Rev. Proc. 2025-19
+  elective_401k: 24500
+  catchup_401k_50: 8000
+  ira: 7500
+  ira_catchup_50: 1100
+  hsa_self: 4400
+  hsa_family: 8750
+  hsa_catchup_55: 1000        # statutory, never indexed
+
+penalties:
+  early_withdrawal_rate: 0.10 # § 72(t); HSA non-qualified is 20% pre-65 (Pub 969) —
+                              # modeled at 10% generic rate, noted in assumptions.md
+
+aca:                          # Premium Tax Credit, IRC § 36B — coverage year 2026
+  # FPL: the PRIOR year's HHS guidelines govern a coverage year (2025 guidelines,
+  # 90 FR 5917, apply to 2026 coverage). 48 contiguous states.
+  # Published: 1p 15,650 / 2p 21,150 / 3p 26,650 / 4p 32,150 = base + 5,500/person.
+  fpl:
+    first_person: 15650
+    additional_person: 5500
+  # Applicable percentage table TY2026, Rev. Proc. 2025-25 § 3.01 (§ 36B(b)(3)(A)(i)).
+  # fpl_from/fpl_to are FPL ratios; linear interpolation within each band.
+  # The jump at 133% (2.10 -> 3.14) is statutory, not a typo. ARPA/IRA enhanced
+  # subsidies expired 2025-12-31, so the >400% cliff applies again from TY2026.
+  # Approximations (assumptions.md): percentages held fixed in projections (IRS
+  # premium-growth indexing not modeled); <100% FPL priced via the <133% band even
+  # though that population is really Medicaid in expansion states like MI.
+  applicable_pct:
+    - { fpl_from: 0.00, fpl_to: 1.33, pct_from: 0.0210, pct_to: 0.0210 }
+    - { fpl_from: 1.33, fpl_to: 1.50, pct_from: 0.0314, pct_to: 0.0419 }
+    - { fpl_from: 1.50, fpl_to: 2.00, pct_from: 0.0419, pct_to: 0.0660 }
+    - { fpl_from: 2.00, fpl_to: 2.50, pct_from: 0.0660, pct_to: 0.0844 }
+    - { fpl_from: 2.50, fpl_to: 3.00, pct_from: 0.0844, pct_to: 0.0996 }
+    - { fpl_from: 3.00, fpl_to: 4.00, pct_from: 0.0996, pct_to: 0.0996 }
+  cliff_fpl_ratio: 4.00       # eligible up to and INCLUDING 400% ("does not exceed")
+
+sources:
+  - "Rev. Proc. 2025-32 (2026 inflation adjustments): https://www.irs.gov/pub/irs-drop/rp-25-32.pdf"
+  - "Notice 2025-67 (2026 retirement plan limits): https://www.irs.gov/pub/irs-drop/n-25-67.pdf"
+  - "Rev. Proc. 2025-19 (2026 HSA limits): https://www.irs.gov/pub/irs-drop/rp-25-19.pdf"
+  - "IRS Pub 15 (2026) — FICA rates, SS wage base: https://www.irs.gov/pub/irs-pdf/p15.pdf"
+  - "IRS Pub 915 (2025) — SS taxation worksheet: https://www.irs.gov/pub/irs-pdf/p915.pdf"
+  - "2025 Form 8960 instructions — NIIT: https://www.irs.gov/pub/irs-pdf/i8960.pdf"
+  - "IRC § 151(d)(5) senior deduction; 2025 Schedule 1-A Part V: https://www.irs.gov/pub/irs-pdf/f1040s1a.pdf"
+  - "Rev. Proc. 2025-25 § 3.01 (TY2026 ACA applicable percentage table): https://www.irs.gov/pub/irs-drop/rp-25-25.pdf"
+  - "2025 HHS Poverty Guidelines (govern 2026 coverage year), 90 FR 5917: https://aspe.hhs.gov/topics/poverty-economic-mobility/poverty-guidelines"
+  - "Verified 2026-09-03 by web research against the above (see session notes)"
+  - "ACA block verified 2026-09-04 against Rev. Proc. 2025-25 PDF and ASPE guidelines"

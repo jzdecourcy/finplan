@@ -1,0 +1,85 @@
+# EXAMPLE base plan for a fictional household — a starting template.
+# Your real plan lives at scenarios/base.yaml (built via the /interview skill) and keeps
+# balances in snapshots/ via `accounts_from: snapshots/latest`. This example inlines
+# balances so it runs standalone:
+#   plan run -f scenarios/examples/base.yaml
+meta:
+  name: example-base
+  description: Fictional two-earner household with one kid, mortgage, and a 529
+
+sim:
+  start_year: 2026
+  horizon: death
+
+household:
+  filing_status: mfj
+  people:
+    - name: sam
+      birth_year: 1980
+      retirement_age: 65        # PLACEHOLDER — retirement timing is a scenario variable
+      ss_claim_age: 67
+      ss_pia_monthly: 2800      # ssa.gov Retirement Calculator, age-67 figure
+      life_expectancy_age: 95
+    - name: riley
+      birth_year: 1982
+      retirement_age: 65        # PLACEHOLDER
+      ss_claim_age: 67
+      ss_pia_monthly: 2300
+      life_expectancy_age: 95
+
+accounts:
+  # Joint taxable brokerage: mostly index funds throwing ~1.6% qualified dividends
+  - { id: brokerage-4321, type: taxable, balance: 250000, cost_basis: 180000,
+      allocation: { stocks: 0.90, bonds: 0.10 },
+      yields: { qualified_dividends: 0.016 } }
+  # Sam's 401k, split by tax source (trad vs Roth must be separate accounts)
+  - { id: 401k-sam-trad, type: traditional, owner: sam, balance: 400000,
+      allocation: { stocks: 0.85, bonds: 0.15 } }
+  - { id: 401k-sam-roth, type: roth, owner: sam, balance: 60000,
+      allocation: { stocks: 0.85, bonds: 0.15 } }
+  - { id: roth-riley-8765, type: roth, owner: riley, balance: 90000,
+      allocation: { stocks: 1.0 } }
+  - { id: hsa-riley, type: hsa, owner: riley, balance: 35000,
+      allocation: { stocks: 1.0 } }
+  - { id: 529-jordan, type: "529", owner: sam, beneficiary: jordan,
+      balance: 55000, cost_basis: 40000,
+      allocation: { cash: 0.30, bonds: 0.40, stocks: 0.30 } }
+  - { id: checking, type: cash, balance: 30000 }
+
+income:
+  - { id: salary-sam, owner: sam, kind: salary, annual: 120000,
+      start: 2026, end: retirement }
+  - { id: salary-riley, owner: riley, kind: salary, annual: 85000,
+      start: 2026, end: retirement }
+
+expenses:
+  - { id: living-fixed, annual: 70000, start: 2026, end: death }
+  - { id: living-flex, annual: 20000, start: 2026, end: death, discretionary: true }
+  # Mortgage P&I is fixed NOMINAL: negative real growth ≈ -inflation, ends at payoff
+  - { id: mortgage-pi, annual: 21600, start: 2026, end: 2035, growth_real: -0.024 }
+  # Escrow (property tax + insurance) outlives the mortgage
+  - { id: property-tax-ins, annual: 6000, start: 2026, end: death }
+  # Jordan: 4 academic years starting fall 2030
+  - { id: college-jordan, annual: 25000, start: 2030, end: 2033, education: true }
+
+events: []
+
+policies:
+  withdrawal:
+    order: [cash, taxable, traditional, roth, hsa]
+  contribution:
+    pretax:
+      - { account: 401k-sam-trad, amount: 20000 }
+      - { account: hsa-riley, amount: max }
+    posttax:
+      - { account: 401k-sam-roth, amount: 5000 }
+      - { account: roth-riley-8765, amount: 7000 }   # posttax needs explicit amounts
+    match_pct: { 401k-sam-trad: 0.04 }    # employer: 100% of deferrals up to 4% of pay
+    priority: [taxable]
+  roth_conversion:
+    type: none
+
+taxes:
+  regime: us_federal
+  state: michigan      # only none/michigan implemented; elsewhere use none + log it
+  base_params_year: 2026

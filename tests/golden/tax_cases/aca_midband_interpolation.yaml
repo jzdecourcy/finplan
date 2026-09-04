@@ -1,0 +1,19 @@
+name: aca-midband-interpolation
+source: >-
+  Rev. Proc. 2025-25 s3.01 + 2025 HHS FPL. MFJ, household 2, FPL 21,150. Trad
+  distributions 47,587.50 = exactly 225% FPL. Applicable pct interpolates the
+  200-250 band: 6.60 + 0.5 x (8.44 - 6.60) = 7.52%. Contribution 0.0752 x
+  47,587.50 = 3,578.58; PTC = 24,000 - 3,578.58 = 20,421.42. Taxable 47,587.50 -
+  32,200 = 15,387.50 -> tax 1,538.75. Federal = 1,538.75 - 20,421.42 = -18,882.67
+  (refundable credit).
+params_year: 2026
+input:
+  filing_status: mfj
+  ages: { p0: 55, p1: 57 }
+  traditional_distributions: 47587.50
+  aca_benchmark_premium: 24000
+  aca_household_size: 2
+expected:
+  aca_credit: 20421.42
+  federal: -18882.67
+tolerance: 1.0

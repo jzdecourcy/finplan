@@ -1,0 +1,17 @@
+name: aca-cliff-just-over
+source: >-
+  Rev. Proc. 2025-25 s3.01: no credit above 400% FPL (ARPA/IRA enhancements
+  expired 2025-12-31). MFJ, household 2: cliff MAGI 84,600. Trad 84,700 =
+  400.47% FPL -> PTC 0. Taxable 84,700 - 32,200 = 52,500 -> 2,480 + 12% x
+  27,700 = 5,804. Federal = 5,804.
+params_year: 2026
+input:
+  filing_status: mfj
+  ages: { p0: 55, p1: 57 }
+  traditional_distributions: 84700
+  aca_benchmark_premium: 24000
+  aca_household_size: 2
+expected:
+  aca_credit: 0
+  federal: 5804
+tolerance: 1.0

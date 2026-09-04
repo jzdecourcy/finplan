@@ -1,0 +1,23 @@
+name: aca-magi-addbacks
+source: >-
+  s36B(d)(2)(B) MAGI = AGI + tax-exempt interest + untaxed SS. MFJ, household 2.
+  Trad 20,000, muni interest 5,000, SS benefits 30,000. Pub 915: provisional =
+  20,000 + 5,000 + 15,000 = 40,000, between 32k/44k -> taxable SS = min(0.5 x
+  8,000, 0.5 x 30,000) = 4,000. AGI = 24,000. ACA MAGI = 24,000 + 5,000 +
+  (30,000 - 4,000) = 55,000 = 260.05% FPL -> pct = 8.44 + 0.200946 x (9.96 -
+  8.44) = 8.7454%. Contribution 4,809.99; PTC = 19,190.01. Taxable 24,000 -
+  32,200 -> 0. Federal = -19,190.01.
+params_year: 2026
+input:
+  filing_status: mfj
+  ages: { p0: 55, p1: 57 }
+  traditional_distributions: 20000
+  tax_exempt_interest: 5000
+  ss_benefits: 30000
+  aca_benchmark_premium: 24000
+  aca_household_size: 2
+expected:
+  aca_credit: 19190.01
+  aca_magi: 55000
+  federal: -19190.01
+tolerance: 1.0

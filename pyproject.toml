@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "finplan"
+version = "0.1.0"
+description = "Personal financial planning and scenario-modeling environment"
+requires-python = ">=3.12"
+dependencies = [
+    "numpy>=1.26",
+    "pandas>=2.1",
+    "pydantic>=2.5",
+    "PyYAML>=6.0",
+    "matplotlib>=3.8",
+    "click>=8.1",
+    "tabulate>=0.9",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+plan = "finplan.cli.main:cli"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+finplan = ["data/**/*.yaml", "data/**/*.csv"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

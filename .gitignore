@@ -1,0 +1,29 @@
+# Personal financial data — never commit real numbers.
+snapshots/*
+!snapshots/.gitkeep
+inbox/*
+!inbox/.gitkeep
+runs/*
+!runs/.gitkeep
+
+# scenarios/ (your plan structure) and knowledge/ (facts, assumptions) are MEANT to be
+# version-controlled — but they accumulate personal financial detail (names, salaries,
+# account labels; never balances). Keep your instance of this repo PRIVATE. If it must
+# be public, uncomment:
+# scenarios/*
+# !scenarios/examples/
+# knowledge/*
+
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+.venv/
+venv/
+build/
+dist/
+.pytest_cache/
+
+# OS / editor
+.DS_Store
+Thumbs.db

@@ -1,0 +1,16 @@
+name: ltcg-straddles-15-20-with-niit
+source: >-
+  QD&CG worksheet + Form 8960. 2026 MFJ 15% ceiling $613,700. Ordinary taxable 600,000:
+  116,896 + 35% x 87,550 = 147,538.50. LTCG 50,000 stacks 600,000-650,000: 13,700 at 15%
+  (2,055) + 36,300 at 20% (7,260). NIIT: AGI 682,200, min(50,000, excess over 250,000)
+  x 3.8% = 1,900. Federal total 158,753.50.
+params_year: 2026
+input:
+  filing_status: mfj
+  ages: { p0: 55, p1: 55 }
+  wages: 632200         # 600,000 taxable after standard deduction
+  realized_ltcg: 50000
+expected:
+  taxable_income: 650000
+  federal: 158753.50
+tolerance: 1.0

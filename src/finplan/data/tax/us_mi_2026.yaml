@@ -1,0 +1,41 @@
+# Michigan individual income tax parameters, TAX YEAR 2026. Verified against primary
+# sources 2026-09-03 — see `sources`. Do not edit without a cited source + green tests.
+year: 2026
+
+rate: 0.0425                  # Form 446 (Rev. 02-26) 2026 Withholding Guide
+personal_exemption: 5900      # Form 446 (Rev. 02-26)
+
+# Lowering MI Costs Act (PA 4 of 2023), fully phased in for 2026: retirement income
+# (pension/IRA/401k distributions in federal AGI) deductible up to a CAPPED,
+# CPI-indexed maximum — the cap applies to everyone regardless of birth year.
+# RAB 2026-1; caps from Form 446 (Rev. 02-26).
+retirement_subtraction:
+  cap_single: 67610
+  cap_mfj: 135220
+  min_age: 59.5               # premature distributions don't qualify (Form 446)
+
+# Alternative election (MCL 206.30(9), born after 1952 & age 67+): flat standard
+# deduction against all income. PA 24 of 2025: for 2026-2028 this stacks with the
+# Social Security subtraction but is reduced by the personal exemption (RAB 2026-1
+# Example J — the exemption legitimately counts twice; do not "fix"). Unindexed.
+senior_standard_deduction:
+  single: 20000
+  mfj: 40000
+  min_age: 67
+
+# MESP + MI 529 Advisor Plan combined cap (2025 Schedule 1 instructions line 17;
+# statutory, long-stable; TY2026 instructions not yet published - reverify Dec 2026).
+mesp_529_deduction:
+  single: 5000
+  mfj: 10000
+
+# Social Security: fully exempt — the engine subtracts the federally taxable portion
+# (2025 Schedule 1 instructions, line 14). No preferential capital-gains rate: gains
+# ride federal AGI at the flat rate.
+
+sources:
+  - "Form 446 2026 MI Income Tax Withholding Guide (Rev. 02-26): https://www.michigan.gov/taxes/-/media/Project/Websites/taxes/Forms/SUW/TY2026/446_Withholding-Guide_2026.pdf"
+  - "RAB 2026-1 Treatment of Retirement Income under PA 4 of 2023: https://www.michigan.gov/taxes/rep-legal/rab/2026-revenue-administrative-bulletins/revenue-administrative-bulletin-2026-1"
+  - "2025 MI Schedule 1 instructions (SS exemption line 14; 529 line 17): https://www.michigan.gov/taxes/-/media/Project/Websites/taxes/Forms/IIT/TY2025/Schedule-1-Instr.pdf"
+  - "PA 24 of 2025 (senior standard deduction stacks with SS subtraction 2026-2028)"
+  - "Verified 2026-09-03 by web research against the above"

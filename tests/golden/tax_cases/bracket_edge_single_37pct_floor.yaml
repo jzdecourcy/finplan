@@ -1,0 +1,12 @@
+name: bracket-edge-single-37pct-floor
+source: "Rev. Proc. 2025-32 s3.01 Table 3: tax at $640,600 taxable = $192,979.25"
+params_year: 2026
+input:
+  filing_status: single
+  ages: { p0: 45 }
+  # wages = 640,600 taxable + 16,100 standard deduction; no investment income -> no NIIT
+  wages: 656700
+expected:
+  taxable_income: 640600
+  federal: 192979.25
+tolerance: 1.0

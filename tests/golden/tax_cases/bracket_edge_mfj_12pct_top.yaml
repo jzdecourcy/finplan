@@ -1,0 +1,12 @@
+name: bracket-edge-mfj-12pct-top
+source: "Rev. Proc. 2025-32 s3.01 Table 1: tax at $100,800 taxable = $2,480 + 12% of 76,000 = $11,600"
+params_year: 2026
+input:
+  filing_status: mfj
+  ages: { p0: 45, p1: 45 }
+  # wages = 100,800 taxable + 32,200 standard deduction
+  wages: 133000
+expected:
+  taxable_income: 100800
+  federal: 11600
+tolerance: 1.0

@@ -1,0 +1,41 @@
+# Which parameter paths index with inflation when projecting future tax years, and their
+# statutory rounding. Everything not listed as index: cpi stays FIXED NOMINAL — that drag
+# (NIIT, SS-taxation thresholds, Additional Medicare) is real law, not an oversight.
+#
+# Approximations, documented: the SS wage base is wage-indexed (AWI), not CPI-indexed, and
+# IRS rounding conventions vary by parameter ($25/$50/$100/$500 by item). We index every
+# cpi item with the simulation path's inflation and round to the increments below. Over
+# multi-decade horizons wage growth ~ CPI + productivity; this slightly understates the
+# wage base. Recorded in knowledge/assumptions.md.
+
+us_federal:
+  ordinary_brackets:        { index: cpi, round_to: 25 }
+  ltcg_brackets:            { index: cpi, round_to: 50 }
+  standard_deduction.single:        { index: cpi, round_to: 50 }
+  standard_deduction.mfj:           { index: cpi, round_to: 50 }
+  standard_deduction.extra_65_single: { index: cpi, round_to: 50 }
+  standard_deduction.extra_65_mfj:    { index: cpi, round_to: 50 }
+  # senior_bonus is statutory 2025-2028, unindexed; handled by expires_after, not cpi
+  fica.ss_wage_base:        { index: cpi, round_to: 300 }
+  limits.elective_401k:     { index: cpi, round_to: 500 }
+  limits.catchup_401k_50:   { index: cpi, round_to: 500 }
+  limits.ira:               { index: cpi, round_to: 500 }
+  limits.ira_catchup_50:    { index: cpi, round_to: 100 }
+  limits.hsa_self:          { index: cpi, round_to: 50 }
+  limits.hsa_family:        { index: cpi, round_to: 50 }
+  # limits.hsa_catchup_55: statutory $1,000, never indexed
+  # niit: statutorily unindexed
+  # ss_taxation: statutorily unindexed
+  # fica.addl_medicare.threshold_*: statutorily unindexed
+  aca.fpl.first_person:      { index: cpi, round_to: 50 }
+  aca.fpl.additional_person: { index: cpi, round_to: 50 }
+  # aca.applicable_pct / aca.cliff_fpl_ratio: ratios, deliberately NOT cpi-indexed
+  # (IRS indexes the percentages annually by a premium-growth factor — not modeled;
+  # recorded in knowledge/assumptions.md)
+
+us_mi:
+  personal_exemption:       { index: cpi, round_to: 100 }
+  retirement_subtraction.cap_single: { index: cpi, round_to: 100 }
+  retirement_subtraction.cap_mfj:    { index: cpi, round_to: 100 }
+  # rate: statutory, not indexed
+  # mesp_529_deduction: statutory, not indexed

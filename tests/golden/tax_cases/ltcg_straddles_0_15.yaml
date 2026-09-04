@@ -1,0 +1,16 @@
+name: ltcg-straddles-0-15
+source: >-
+  QD&CG Tax Worksheet logic with Rev. Proc. 2025-32 s3.03 (2026 MFJ 0% ceiling $98,900).
+  Hand-computed: ordinary taxable 50,000 -> tax 2,480 + 12% x 25,200 = 5,504. LTCG 60,000
+  stacks 50,000-110,000: 48,900 at 0%, 11,100 at 15% = 1,665. Total federal 7,169. AGI
+  142,200 < NIIT threshold.
+params_year: 2026
+input:
+  filing_status: mfj
+  ages: { p0: 45, p1: 45 }
+  wages: 82200          # 50,000 taxable after the 32,200 standard deduction
+  realized_ltcg: 60000
+expected:
+  taxable_income: 110000
+  federal: 7169
+tolerance: 1.0

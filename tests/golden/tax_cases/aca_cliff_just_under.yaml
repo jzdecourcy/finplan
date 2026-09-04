@@ -1,0 +1,19 @@
+name: aca-cliff-just-under
+source: >-
+  Rev. Proc. 2025-25 s3.01. MFJ, household 2, FPL 21,150, cliff MAGI = 4.00 x
+  21,150 = 84,600. Trad 84,500 = 399.5% FPL -> top band flat 9.96%. Contribution
+  0.0996 x 84,500 = 8,416.20; PTC = 24,000 - 8,416.20 = 15,583.80. Taxable
+  84,500 - 32,200 = 52,300 -> 2,480 + 12% x 27,500 = 5,780. Federal = 5,780 -
+  15,583.80 = -9,803.80. Pair with aca-cliff-just-over: +$200 income costs
+  ~$15.6k in lost credit.
+params_year: 2026
+input:
+  filing_status: mfj
+  ages: { p0: 55, p1: 57 }
+  traditional_distributions: 84500
+  aca_benchmark_premium: 24000
+  aca_household_size: 2
+expected:
+  aca_credit: 15583.80
+  federal: -9803.80
+tolerance: 1.0

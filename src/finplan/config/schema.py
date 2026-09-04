@@ -1,0 +1,270 @@
+"""Pydantic models for the *resolved* scenario config.
+
+Overlays are partial dicts and are never validated alone; validation happens after
+composition (config.compose) and snapshot resolution (config.loader).
+"""
+
+from __future__ import annotations
+
+from typing import Literal
+
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+YearRefT = int | str
+
+
+class StrictModel(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+
+class MetaCfg(StrictModel):
+    name: str = "unnamed"
+    description: str = ""
+
+
+class SimCfg(StrictModel):
+    start_year: int
+    horizon: YearRefT = "death"          # "death" or explicit end year
+
+
+class PersonCfg(StrictModel):
+    name: str
+    birth_year: int
+    retirement_age: int | None = None
+    ss_claim_age: int | None = None
+    ss_pia_monthly: float | None = None
+    life_expectancy_age: int = 95
+
+
+class HouseholdCfg(StrictModel):
+    filing_status: Literal["single", "mfj"]
+    people: list[PersonCfg] = Field(min_length=1, max_length=2)
+
+
+_YIELD_KEYS = {"interest", "us_gov_interest", "muni_interest",
+               "qualified_dividends", "ordinary_dividends"}
+
+
+class AccountCfg(StrictModel):
+    id: str
+    type: Literal["taxable", "traditional", "roth", "hsa", "cash", "529"]
+    owner: str | None = None
+    balance: float = 0.0
+    cost_basis: float | None = None      # defaults: taxable/roth/529 -> balance; else 0
+    allocation: dict[str, float] | None = None
+    beneficiary: str | None = None
+    # taxable accounts only: annual yield by tax character, as fraction of balance
+    # (e.g. {qualified_dividends: 0.015}). Reinvested + taxed annually. Cash accounts
+    # are taxed automatically on their full return - no yields entry needed.
+    yields: dict[str, float] | None = None
+
+    @model_validator(mode="after")
+    def _check_yields(self):
+        if self.yields:
+            bad = set(self.yields) - _YIELD_KEYS
+            if bad:
+                raise ValueError(f"account {self.id!r}: unknown yield keys {sorted(bad)}; "
+                                 f"allowed: {sorted(_YIELD_KEYS)}")
+        return self
+
+
+class IncomeCfg(StrictModel):
+    id: str
+    owner: str | None = None
+    kind: Literal["salary", "business", "pension", "rental", "other"] = "salary"
+    annual: float
+    start: YearRefT
+    end: YearRefT
+    growth_real: float = 0.0
+    taxable: bool = True
+    fica: bool = True
+    phantom: bool = False   # taxable but produces NO cash (undistributed K-1 share)
+
+
+class ExpenseCfg(StrictModel):
+    id: str
+    annual: float
+    start: YearRefT
+    end: YearRefT
+    growth_real: float = 0.0
+    discretionary: bool = False
+    education: bool = False
+    # This stream is the ACA marketplace premium: its amount doubles as the benchmark
+    # (SLCSP proxy) for the premium tax credit and its start/end are the coverage
+    # years. The stream still charges the FULL premium; the credit lands in taxes.
+    aca: bool = False
+
+
+class EventCfg(StrictModel):
+    id: str
+    year: YearRefT
+    cash: float = 0.0
+    taxable_as: Literal["none", "ordinary", "ltcg"] = "none"
+    education: bool = False
+
+
+class SpendingPolicyCfg(StrictModel):
+    # fixed_real: spend every expense stream as configured.
+    # guardrail: in retirement (no wage income), after a year with a negative REAL
+    # stock return, cut `discretionary: true` expense streams by cut_fraction.
+    type: Literal["fixed_real", "guardrail"] = "fixed_real"
+    cut_fraction: float = 0.5
+
+    @model_validator(mode="after")
+    def _check(self):
+        if not (0.0 <= self.cut_fraction <= 1.0):
+            raise ValueError("cut_fraction must be between 0 and 1")
+        return self
+
+
+class WithdrawalPolicyCfg(StrictModel):
+    # entries are account types (taxable, traditional, ...) or specific account ids
+    order: list[str] = ["cash", "taxable", "traditional", "roth", "hsa"]
+
+
+class PlannedContributionCfg(StrictModel):
+    account: str
+    amount: float | Literal["max"] = "max"   # "max" = the indexed statutory limit
+    owner: str | None = None                 # defaults to the account's owner
+
+
+class ContributionPolicyCfg(StrictModel):
+    # While working: pre-tax elective deferrals (traditional 401k, HSA) reduce taxable
+    # wages; employer match is a % of the owner's salary deposited pre-tax on top.
+    pretax: list[PlannedContributionCfg] = []
+    posttax: list[PlannedContributionCfg] = []   # Roth 401k etc.: after-tax payroll money
+    match_pct: dict[str, float] = {}         # account id -> fraction of owner's salary
+    plan_529: list[PlannedContributionCfg] = []  # after-tax; MI-deductible up to cap
+    # Whatever cash is left after spending/taxes goes to the first of these sinks:
+    priority: list[str] = ["taxable"]
+
+
+class RothConversionPolicyCfg(StrictModel):
+    # fill_to_magi = fill_bracket PLUS a MAGI ceiling: convert up to the bracket top
+    # but never past the cap. magi_cap "aca_cliff" resolves to margin x 400% x FPL
+    # (household size from the ACA config) in years ACA coverage is active — the
+    # subsidy-aware conversion ladder. A float cap is start-year real dollars.
+    type: Literal["none", "fixed", "fill_bracket", "fill_to_magi"] = "none"
+    amount: float | None = None          # fixed
+    bracket_top: float | None = None     # fill_bracket / fill_to_magi, e.g. 0.12
+    magi_cap: float | Literal["aca_cliff"] | None = None   # fill_to_magi
+    margin: float = 0.98                 # safety factor: conversions run BEFORE the
+                                         # funding withdrawals that also raise MAGI
+    start: YearRefT | None = None
+    end: YearRefT | None = None
+
+    @model_validator(mode="after")
+    def _check(self):
+        if self.type == "fixed" and self.amount is None:
+            raise ValueError("roth_conversion type 'fixed' requires 'amount'")
+        if self.type in ("fill_bracket", "fill_to_magi") and self.bracket_top is None:
+            raise ValueError(f"roth_conversion type {self.type!r} requires 'bracket_top'")
+        if self.type == "fill_to_magi" and self.magi_cap is None:
+            raise ValueError("roth_conversion type 'fill_to_magi' requires 'magi_cap'")
+        if not (0.0 < self.margin <= 1.0):
+            raise ValueError("margin must be in (0, 1]")
+        return self
+
+
+class RebalancePolicyCfg(StrictModel):
+    type: Literal["none", "annual_to_target"] = "none"
+
+
+class PoliciesCfg(StrictModel):
+    spending: SpendingPolicyCfg = SpendingPolicyCfg()
+    withdrawal: WithdrawalPolicyCfg = WithdrawalPolicyCfg()
+    contribution: ContributionPolicyCfg = ContributionPolicyCfg()
+    roth_conversion: RothConversionPolicyCfg = RothConversionPolicyCfg()
+    rebalance: RebalancePolicyCfg = RebalancePolicyCfg()
+
+
+class DeterministicMarketCfg(StrictModel):
+    real_returns: dict[str, float] = {"stocks": 0.05, "bonds": 0.015, "cash": 0.0}
+    inflation: float = 0.025
+
+
+class MCAssetCfg(StrictModel):
+    real_mean: float
+    vol: float
+
+
+class MonteCarloMarketCfg(StrictModel):
+    n_paths: int = 1000
+    assets: dict[str, MCAssetCfg] = {
+        "stocks": MCAssetCfg(real_mean=0.05, vol=0.17),
+        "bonds": MCAssetCfg(real_mean=0.015, vol=0.06),
+        "cash": MCAssetCfg(real_mean=0.0, vol=0.01),
+    }
+    inflation_mean: float = 0.025
+    inflation_vol: float = 0.015
+    # pairwise correlations, keys like "stocks_bonds", "stocks_inflation"
+    correlation: dict[str, float] = {}
+
+
+class HistoricalMarketCfg(StrictModel):
+    source: Literal["shiller"] = "shiller"
+    window: Literal["rolling"] = "rolling"
+
+
+class MarketCfg(StrictModel):
+    deterministic: DeterministicMarketCfg = DeterministicMarketCfg()
+    monte_carlo: MonteCarloMarketCfg = MonteCarloMarketCfg()
+    historical: HistoricalMarketCfg = HistoricalMarketCfg()
+
+
+class AcaSizeStepCfg(StrictModel):
+    through: YearRefT       # inclusive; int year or a YearRef like "age:alex:65"
+    size: int
+
+
+class AcaCfg(StrictModel):
+    # Premium tax credit modeling. Active only when BOTH enabled=true and some
+    # expense stream carries `aca: true` (so base configs stay inert by default).
+    enabled: bool = True
+    household_size: int | None = None    # None -> len(household.people)
+    # Tax-family size steps (kids age off the return); first step whose `through`
+    # covers the year wins; overrides household_size when non-empty.
+    household_size_schedule: list[AcaSizeStepCfg] = []
+
+
+class TaxCfg(StrictModel):
+    regime: Literal["flat_stub", "us_federal"] = "us_federal"
+    state: Literal["none", "michigan"] = "none"
+    base_params_year: int = 2026
+    flat_effective_rate: float = 0.22    # used only by regime=flat_stub
+    # QBI (s199A): 20% of business income, limited by 50% of allocable W-2 wages.
+    # Set the wage cap (start-year dollars, CPI-indexed) from the actual return:
+    # line 13 when the wage limit binds. None disables QBI.
+    qbi_wage_cap: float | None = None
+    aca: AcaCfg = AcaCfg()
+
+
+class ScenarioConfig(StrictModel):
+    meta: MetaCfg = MetaCfg()
+    sim: SimCfg
+    household: HouseholdCfg
+    accounts_from: str | None = None     # e.g. "snapshots/latest"; resolved by loader
+    accounts: list[AccountCfg] = []
+    income: list[IncomeCfg] = []
+    expenses: list[ExpenseCfg] = []
+    events: list[EventCfg] = []
+    policies: PoliciesCfg = PoliciesCfg()
+    market: MarketCfg = MarketCfg()
+    taxes: TaxCfg = TaxCfg()
+
+    @model_validator(mode="after")
+    def _cross_checks(self):
+        names = {p.name for p in self.household.people}
+        for a in self.accounts:
+            if a.owner is not None and a.owner not in names:
+                raise ValueError(f"account {a.id!r}: unknown owner {a.owner!r}")
+        for s in self.income:
+            if s.owner is not None and s.owner not in names:
+                raise ValueError(f"income {s.id!r}: unknown owner {s.owner!r}")
+        ids = [a.id for a in self.accounts]
+        if len(ids) != len(set(ids)):
+            raise ValueError("duplicate account ids")
+        aca_streams = [e.id for e in self.expenses if e.aca]
+        if len(aca_streams) > 1:
+            raise ValueError(f"at most one expense stream may set aca: true; got {aca_streams}")
+        return self

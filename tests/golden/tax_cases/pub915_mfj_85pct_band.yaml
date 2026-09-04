@@ -1,0 +1,12 @@
+name: pub915-mfj-85pct-band
+source: "IRS Pub 915 (2025), Example 3 (Johnsons), p. 9 - exercises both 50% and 85% tiers"
+params_year: 2026
+input:
+  filing_status: mfj
+  ages: { p0: 68, p1: 67 }
+  ss_benefits: 10000
+  other_ordinary: 40500
+expected:
+  taxable_ss: 6275
+  agi: 46775
+tolerance: 1.0

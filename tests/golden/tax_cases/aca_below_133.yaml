@@ -1,0 +1,18 @@
+name: aca-below-133
+source: >-
+  Rev. Proc. 2025-25 s3.01, <133% band flat 2.10%. MFJ, household 2, FPL 21,150.
+  Trad 25,000 = 118.2% FPL. Contribution 0.021 x 25,000 = 525; PTC = 24,000 -
+  525 = 23,475. Taxable 25,000 - 32,200 -> 0, tax 0. Federal = -23,475.
+  (Engine approximation: <100% FPL households would really be on Medicaid in
+  expansion states; priced via the <133% band — assumptions.md.)
+params_year: 2026
+input:
+  filing_status: mfj
+  ages: { p0: 55, p1: 57 }
+  traditional_distributions: 25000
+  aca_benchmark_premium: 24000
+  aca_household_size: 2
+expected:
+  aca_credit: 23475
+  federal: -23475
+tolerance: 1.0
