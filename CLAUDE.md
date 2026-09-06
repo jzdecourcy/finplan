@@ -93,7 +93,5 @@ Federal + Michigan state tax only (other states: set `state: none`, warn the use
 log it in assumptions — adding a state is a code project: module under
 `src/finplan/taxes/`, cited parameter file under `src/finplan/data/tax/`, golden tests).
 Standard deduction only; no AMT; average-cost basis; no loss carryforwards; annual steps.
-`plan tax-year` has no QBI option and puts all wages on one earner (use it for W-2-only
-sanity checks; business owners reconcile via a `plan run` year-1 ledger). Contribution
-policies have no start/end dates. Education expenses draw from 529s in config order,
-ignoring beneficiary. Cash accounts grow at the modeled cash return, not their APY.
+Cash accounts grow at the modeled cash return, not their APY. Only one federal
+parameter year ships (2026), so prior-year returns reconcile approximately.

@@ -69,6 +69,7 @@ class TaxResult:
     agi: float = 0.0
     taxable_income: float = 0.0
     taxable_ss: float = 0.0
+    qbi_deduction: float = 0.0
     marginal_rate_ordinary: float = 0.0
     marginal_rate_ltcg: float = 0.0
     aca_magi: float = 0.0

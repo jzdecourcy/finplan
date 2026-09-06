@@ -102,6 +102,7 @@ def compute_year_tax(inp: TaxInput, params: dict, mi_params: dict | None = None)
         agi=agi,
         taxable_income=taxable_income,
         taxable_ss=taxable_ss,
+        qbi_deduction=qbi_deduction,
         aca_magi=aca_res.magi if aca_res else 0.0,
         aca_fpl_pct=aca_res.fpl_pct if aca_res else 0.0,
         aca_credit=aca_res.credit if aca_res else 0.0,

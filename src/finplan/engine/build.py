@@ -154,13 +154,13 @@ def build_simulation(cfg: ScenarioConfig) -> Simulation:
             ExpenseStream(
                 id=s.id, annual=s.annual, start=s.start, end=s.end,
                 growth_real=s.growth_real, discretionary=s.discretionary,
-                education=s.education, aca=s.aca,
+                education=s.education, aca=s.aca, beneficiary=s.beneficiary,
             )
             for s in cfg.expenses
         ],
         events=[
             Event(id=e.id, year=e.year, cash=e.cash, taxable_as=e.taxable_as,
-                  education=e.education)
+                  education=e.education, beneficiary=e.beneficiary)
             for e in cfg.events
         ],
         tax_engine=build_tax_engine(cfg),

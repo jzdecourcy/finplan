@@ -121,6 +121,7 @@ class Simulation:
 
             # 2. events
             education_out = 0.0
+            education_by_kid: dict[str | None, float] = {}   # beneficiary -> need
             for ev in self.events:
                 if ev.occurs_in(year, ctx):
                     nominal = ev.cash * cpi
@@ -128,6 +129,8 @@ class Simulation:
                         led.event_cash_in += nominal
                     elif ev.education:
                         education_out += -nominal
+                        education_by_kid[ev.beneficiary] = (
+                            education_by_kid.get(ev.beneficiary, 0.0) - nominal)
                     else:
                         led.event_cash_out += -nominal
 
@@ -175,7 +178,8 @@ class Simulation:
                     led.interest_dividends += dollars
 
             planned = contribution.planned(
-                state, wages_by_person, ages, self._contribution_limits(cpi), cpi
+                state, wages_by_person, ages, self._contribution_limits(cpi), cpi,
+                year=year, ctx=ctx,
             )
 
             # 4. RMDs (from prior Dec-31 balances; distribution lands as spendable cash)
@@ -281,16 +285,33 @@ class Simulation:
                     amt *= 1 - cut
                 if s.education:
                     education_out += amt
+                    education_by_kid[s.beneficiary] = (
+                        education_by_kid.get(s.beneficiary, 0.0) + amt)
                 else:
                     general_spend += amt
+            # 529 draws: each kid's need comes from THEIR 529(s) first; whatever is
+            # left (no beneficiary named, or their account is empty) may draw from any
+            # 529 (sibling transfer, penalty-free for qualified expenses).
             education_from_529 = 0.0
             if education_out > 0:
-                for acct in state.accounts:
-                    if acct.type is AccountType.PLAN_529 and education_out > 0:
-                        res = acct.withdraw(education_out - education_from_529, qualified=True)
-                        education_from_529 += res.amount
-                        if education_from_529 >= education_out:
-                            break
+                plans = [a for a in state.accounts if a.type is AccountType.PLAN_529]
+                unmet = 0.0
+                for kid, need in education_by_kid.items():
+                    if need <= 0:
+                        continue
+                    if kid is not None:
+                        for acct in plans:
+                            if acct.beneficiary == kid and need > 0:
+                                res = acct.withdraw(need, qualified=True)
+                                need -= res.amount
+                                education_from_529 += res.amount
+                    unmet += need
+                for acct in plans:
+                    if unmet <= 0:
+                        break
+                    res = acct.withdraw(unmet, qualified=True)
+                    unmet -= res.amount
+                    education_from_529 += res.amount
             led.spending = general_spend + education_out
 
             # 7-8. fund the gap; final tax

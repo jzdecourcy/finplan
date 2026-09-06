@@ -216,8 +216,14 @@ def sweep(files, spec_path, mode, seed, n_paths, workers, out_dir) -> None:
 @click.option("--income", "income_parts", multiple=True,
               help="component=amount, e.g. wages=180000 ltcg=20000 ss=40000 trad=30000 "
                    "conversion=25000 interest=1000 qdiv=5000 mi529=10000 "
-                   "aca_premium=24000 aca_hh=2")
-def tax_year(year, filing, state, ages, income_parts) -> None:
+                   "aca_premium=24000 aca_hh=2 business=250000")
+@click.option("--wages", "wages_parts", multiple=True,
+              help="per-earner W-2 wages for FICA, name=amount (repeat); "
+                   "replaces --income wages=")
+@click.option("--qbi-wage-cap", type=float, default=None,
+              help="s199A wage cap = 50%% of allocable W-2 wages (Statement A); "
+                   "omit = no QBI deduction")
+def tax_year(year, filing, state, ages, income_parts, wages_parts, qbi_wage_cap) -> None:
     """One-off tax calculation (debugging / trust-building)."""
     from finplan.model.household import FilingStatus
     from finplan.taxes.engine import compute_year_tax, marginal_rate
@@ -242,10 +248,23 @@ def tax_year(year, filing, state, ages, income_parts) -> None:
     if "aca_household_size" in kwargs:
         kwargs["aca_household_size"] = int(kwargs["aca_household_size"])
     age_list = list(ages) or ([45, 45] if filing == "mfj" else [45])
+    wages_by_person: dict[str, float] = {}
+    for part in wages_parts:
+        name, _, v = part.partition("=")
+        if not v:
+            raise click.UsageError(f"--wages expects name=amount, got {part!r}")
+        wages_by_person[name] = wages_by_person.get(name, 0.0) + float(v.replace(",", ""))
+    if wages_by_person:
+        if kwargs.get("wages"):
+            raise click.UsageError("use either --wages name=amount or --income wages=, not both")
+        kwargs["wages"] = sum(wages_by_person.values())
+    elif kwargs.get("wages"):
+        wages_by_person = {"p0": kwargs["wages"]}
     inp = TaxInput(
         year=year, filing_status=FilingStatus(filing),
         ages={f"p{i}": a for i, a in enumerate(age_list)},
-        wages_by_person={"p0": kwargs.get("wages", 0.0)} if kwargs.get("wages") else {},
+        wages_by_person=wages_by_person,
+        qbi_wage_cap=qbi_wage_cap,
         **kwargs,
     )
     try:
@@ -261,6 +280,8 @@ def tax_year(year, filing, state, ages, income_parts) -> None:
         ("FICA", r.fica), ("penalties", r.penalties), ("Michigan tax", r.state),
         ("TOTAL", r.total),
     ]
+    if qbi_wage_cap is not None:
+        rows[2:2] = [("QBI deduction", r.qbi_deduction)]
     if kwargs.get("aca_benchmark_premium"):
         rows[3:3] = [("ACA MAGI", r.aca_magi), ("ACA premium credit", r.aca_credit)]
     for label, v in rows:

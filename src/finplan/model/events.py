@@ -21,6 +21,7 @@ class Event:
     cash: float = 0.0
     taxable_as: Literal["none", "ordinary", "ltcg"] = "none"
     education: bool = False      # outflow may be funded from a 529 tax-free
+    beneficiary: str | None = None   # education events: which kid's 529 first
 
     def occurs_in(self, year: int, ctx: RefContext) -> bool:
         return resolve(self.year, ctx) == year

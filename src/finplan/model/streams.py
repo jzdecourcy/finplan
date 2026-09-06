@@ -43,4 +43,5 @@ class IncomeStream(_Stream):
 class ExpenseStream(_Stream):
     discretionary: bool = False
     education: bool = False      # qualified education expense -> 529-eligible
+    beneficiary: str | None = None   # which kid's 529 to draw first (None = any)
     aca: bool = False            # ACA premium: amount doubles as the PTC benchmark

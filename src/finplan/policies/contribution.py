@@ -15,8 +15,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from finplan.config.schema import ContributionPolicyCfg
+from finplan.config.schema import ContributionPolicyCfg, PlannedContributionCfg
 from finplan.model.accounts import AccountType
+from finplan.model.refs import RefContext, resolve
 from finplan.model.state import SimState
 
 
@@ -48,6 +49,21 @@ def _limit_for(acct_type: AccountType, limits: dict, age: int) -> float:
     return float("inf")
 
 
+def _active(pc: PlannedContributionCfg, owner: str | None,
+            year: int | None, ctx: RefContext | None) -> bool:
+    """Is this planned contribution inside its optional [start, end] window?"""
+    if pc.start is None and pc.end is None:
+        return True
+    if year is None or ctx is None:
+        return True   # callers without a calendar (unit tests) get the undated behavior
+    octx = RefContext(ctx.birth_years, ctx.retirement_years, ctx.horizon_year, owner)
+    if pc.start is not None and year < resolve(pc.start, octx):
+        return False
+    if pc.end is not None and year > resolve(pc.end, octx):
+        return False
+    return True
+
+
 class ContributionPolicy:
     def __init__(self, cfg: ContributionPolicyCfg):
         self.cfg = cfg
@@ -59,14 +75,19 @@ class ContributionPolicy:
         ages: dict[str, int],
         limits: dict | None,
         cpi_factor: float,
+        year: int | None = None,
+        ctx: RefContext | None = None,
     ) -> PlannedContributions:
-        """Execute payroll-linked contributions (deferrals, match, 529). Mutates accounts."""
+        """Execute payroll-linked contributions (deferrals, match, 529). Mutates accounts.
+        `year`/`ctx` enable the optional start/end window on each planned item."""
         out = PlannedContributions()
         remaining_wages = dict(wages_by_person)
 
         for pc in self.cfg.pretax:
             acct = state.account(pc.account)
             owner = pc.owner or acct.owner
+            if not _active(pc, owner, year, ctx):
+                continue
             wages = remaining_wages.get(owner, 0.0)
             if wages <= 0:
                 continue
@@ -89,6 +110,8 @@ class ContributionPolicy:
         for pc in self.cfg.posttax:
             acct = state.account(pc.account)
             owner = pc.owner or acct.owner
+            if not _active(pc, owner, year, ctx):
+                continue
             if pc.amount == "max":
                 raise ValueError("posttax contributions need an explicit amount")
             wages = remaining_wages.get(owner, 0.0)
@@ -114,6 +137,8 @@ class ContributionPolicy:
             if pc.amount == "max":
                 raise ValueError("529 contributions need an explicit amount")
             owner = pc.owner or acct.owner
+            if not _active(pc, owner, year, ctx):
+                continue
             if owner is not None and remaining_wages.get(owner, 0.0) <= 0:
                 continue  # 529 contributions stop when the owner stops earning
             amount = pc.amount * cpi_factor

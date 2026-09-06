@@ -127,6 +127,9 @@ Write: account STRUCTURE (id, type, owner, allocation, yields, beneficiary) into
 
 Also capture ongoing contributions here while the statements are open: deferral
 amounts, HSA/IRA contributions, 529 funding, employer match → `policies.contribution`.
+- **Contribution changes already decided** ("X now, the max from next year") are
+  expressed with dated items on the same account: `{amount: 18000, end: 2026}` plus
+  `{amount: max, start: 2027}` (inclusive YearRefs; "retirement" resolves per owner).
 - **Employer plans (401k/403b)**: set `rule_of_55: true` on each account in the
   CURRENT employer's plan (trad and Roth sources alike) - separation in or after the
   year the owner turns 55 waives the 10% early-withdrawal penalty on that plan only,
@@ -172,7 +175,8 @@ Always capture the house: current value (Zillow or similar, dated), mortgage bal
 rate, P&I, escrow, and payoff date -> a "House" section in `knowledge/facts.md`. The
 engine's net worth excludes it; total-balance-sheet reporting needs it.
 
-College (per-kid cost × academic years, `education: true`), planned moves, home
+College (per-kid cost × academic years, `education: true`, `beneficiary: <kid>` so the
+engine drains that kid's 529 first and only then borrows from a sibling's), planned moves, home
 sales/purchases, expected windfalls or inheritances (`events` with `taxable_as`),
 weddings, big one-time purchases. Anything vague goes in `knowledge/open-questions.md`
 instead of the config.

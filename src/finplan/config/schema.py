@@ -107,6 +107,7 @@ class ExpenseCfg(StrictModel):
     growth_real: float = 0.0
     discretionary: bool = False
     education: bool = False
+    beneficiary: str | None = None   # education streams: draw this kid's 529 first
     # This stream is the ACA marketplace premium: its amount doubles as the benchmark
     # (SLCSP proxy) for the premium tax credit and its start/end are the coverage
     # years. The stream still charges the FULL premium; the credit lands in taxes.
@@ -119,6 +120,7 @@ class EventCfg(StrictModel):
     cash: float = 0.0
     taxable_as: Literal["none", "ordinary", "ltcg"] = "none"
     education: bool = False
+    beneficiary: str | None = None   # education events: draw this kid's 529 first
 
 
 class SpendingPolicyCfg(StrictModel):
@@ -144,6 +146,11 @@ class PlannedContributionCfg(StrictModel):
     account: str
     amount: float | Literal["max"] = "max"   # "max" = the indexed statutory limit
     owner: str | None = None                 # defaults to the account's owner
+    # Optional active window (inclusive YearRefs; "retirement" resolves per owner).
+    # Lets a policy change mid-career: {amount: 18000, end: 2026} then
+    # {amount: max, start: 2027} on the same account.
+    start: YearRefT | None = None
+    end: YearRefT | None = None
 
 
 class ContributionPolicyCfg(StrictModel):
@@ -221,7 +228,7 @@ class MCAssetCfg(StrictModel):
 
 
 class MonteCarloMarketCfg(StrictModel):
-    n_paths: int = 1000
+    n_paths: int = 2000
     assets: dict[str, MCAssetCfg] = {
         "stocks": MCAssetCfg(real_mean=0.05, vol=0.17),
         "bonds": MCAssetCfg(real_mean=0.015, vol=0.06),
@@ -229,8 +236,12 @@ class MonteCarloMarketCfg(StrictModel):
     }
     inflation_mean: float = 0.025
     inflation_vol: float = 0.015
-    # pairwise correlations, keys like "stocks_bonds", "stocks_inflation"
-    correlation: dict[str, float] = {}
+    # pairwise correlations, keys like "stocks_bonds", "stocks_inflation". Defaults are
+    # the calibrated planning values (mild stock/bond diversification, inflation hurts
+    # both, bonds more); pass {} explicitly for independent series.
+    correlation: dict[str, float] = {
+        "stocks_bonds": -0.10, "stocks_inflation": -0.20, "bonds_inflation": -0.40,
+    }
 
 
 class HistoricalMarketCfg(StrictModel):

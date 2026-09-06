@@ -42,7 +42,8 @@ plan sweep    -f scenarios/base.yaml --spec scenarios/sweeps/grid.yaml [--mode d
               # cross decision levers x stress conditions; per-lever frontier + lookup tables
 plan validate / plan show-config [--diff-base]
 plan update [brokerage=462000 ...] / plan status
-plan tax-year --year 2026 --filing mfj --income wages=180000 --income ltcg=20000
+plan tax-year --year 2026 --filing mfj --wages sam=95000 --wages riley=95000 \
+              --income business=250000 --qbi-wage-cap 250000 --income ltcg=20000
 plan tax-year --year 2026 --filing mfj --income trad=80000 --income aca_premium=24000 --income aca_hh=2
 ```
 
