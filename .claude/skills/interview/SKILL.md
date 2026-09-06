@@ -75,14 +75,22 @@ Traps to probe explicitly:
   normal `business` stream (`fica: false` for S-corp distributions) and the undistributed
   excess as a separate stream with `phantom: true`. Reconcile against the last 1040 — if
   modeled AGI doesn't roughly match line 11, something is missing.
-- **QBI**: ask for 1040 line 13. If it's less than 20% of business income, the W-2 wage
-  cap binds — set `taxes.qbi_wage_cap` from the actual return. If there's no
-  pass-through income, leave `qbi_wage_cap: null`.
+- **QBI**: `taxes.qbi_wage_cap: null` means NO deduction in the engine, so any household
+  with pass-through income must set it. Ask for 1040 line 13 and the K-1's Statement A
+  allocable W-2 wages: enter 50% of those wages as the cap (the cap only binds if line 13
+  is less than 20% of business income). Leave it null only when there is no
+  pass-through income at all.
 - Other streams: pensions, rentals, RSU vesting (model as `other`), expected inheritances
   (those are `events`, Phase 6).
 
 Sanity check: run `plan tax-year` with the stated income and compare total tax to the
 last return. Large mismatches mean missing income or mischaracterized streams.
+- **Investment income gap**: compare the return's investment income (interest +
+  dividends + capital-gain distributions, Schedule B / 1099-DIV box 2a) with what the
+  modeled yields produce. Actively managed funds and CEFs distribute realized gains
+  every year; if the return shows more than the yields explain, set
+  `ltcg_distributions:` (fraction of balance per year) on the taxable account that
+  holds them. This is usually the largest tax-projection error in a first draft.
 
 ## Phase 3 — Accounts (exports > statements > typed numbers)
 
@@ -103,12 +111,15 @@ Type-specific probes:
   annual income ÷ balance. This drives state-tax treatment (e.g. Treasuries are
   state-exempt; out-of-state munis may be state-taxable).
 - **529s**: statement "Principal" = cost basis; one beneficiary per account.
-- **Cash**: checking/savings/HYSA are `type: cash` — no yields entry needed, the engine
-  taxes their full return automatically.
+- **Cash**: checking/savings/HYSA are `type: cash` - no yields entry needed, the engine
+  taxes their full return automatically. Warn the user that the engine grows cash at its
+  own cash assumption (0% real, ~inflation), NOT the account's APY; record the APY in
+  `knowledge/facts.md` for reference.
 - **I bonds / TreasuryDirect**: no exports exist, and confirmation numbers repeat
   across spouses' accounts — identify holdings by the Registration line. Interest is
-  tax-deferred and state-exempt — model I bonds as a taxable account with no yields
-  (untaxed growth, face value as basis) and note the approximation.
+  tax-deferred and state-exempt — model I bonds as a taxable account with `allocation: {cash: 1.0}` and no yields
+  (untaxed growth, face value as basis) and note the approximation (the eventual gain
+  prices as LTCG rather than ordinary interest).
 
 Write: account STRUCTURE (id, type, owner, allocation, yields, beneficiary) into
 `scenarios/base.yaml`; BALANCES (+ cost_basis) into `snapshots/<today>.yaml`; set
@@ -116,17 +127,26 @@ Write: account STRUCTURE (id, type, owner, allocation, yields, beneficiary) into
 
 Also capture ongoing contributions here while the statements are open: deferral
 amounts, HSA/IRA contributions, 529 funding, employer match → `policies.contribution`.
+- **Employer plans (401k/403b)**: set `rule_of_55: true` on each account in the
+  CURRENT employer's plan (trad and Roth sources alike) - separation in or after the
+  year the owner turns 55 waives the 10% early-withdrawal penalty on that plan only,
+  and the engine checks the age per scenario. Old-employer plans and IRAs don't get it.
+  Log the plan-document caveat (partial post-separation withdrawals must be allowed) in
+  `knowledge/open-questions.md`.
 
 ## Phase 4 — Spending (never accept a guess as final)
 
 Two-step, always:
 1. **Decompose housing immediately.** Mortgage P&I (fixed nominal, ENDS at payoff —
-   model with `growth_real` ≈ −inflation and an end year) vs. escrow/property
+   model with `growth_real` ≈ −inflation and an end year); `end:` years are INCLUSIVE and there are no partial years, so pick the end year that matches the remaining payment count vs. escrow/property
    tax/insurance (never ends) vs. everything-else. Ask whether their spending estimate
    included the house payment — half the time it silently did.
 2. **Verify top-down from the last 1040**: income − total tax − known savings =
-   spending. If the bottom-up guess and the top-down residual disagree by more than
-   ~10%, dig — offer to do card/checking forensics from statements in `inbox/`.
+   spending. Subtract the year's growth in cash and investment balances first - a
+   household banking a large surplus otherwise shows a false "mismatch". If the
+   bottom-up guess and the top-down residual still disagree by more than ~10%, dig:
+   offer to do card/checking forensics from statements in `inbox/`; the forensics
+   number is the tiebreaker.
 
 Split the result into at least two streams: a fixed/baseline stream and a
 `discretionary: true` flexible stream (restaurants, travel, hobbies) — the guardrail
@@ -135,13 +155,22 @@ sinking fund if they own cars (~cost/replacement-cycle per car).
 
 ## Phase 5 — Social Security
 
-Each earner pulls their SSA.gov Retirement Calculator estimate (the PDF is easiest to
-share). Enter the **age-67 figure** as `ss_pia_monthly` and note in
-`knowledge/assumptions.md` that SSA assumes continued earnings to claim — slightly
-optimistic if retiring early. Default `ss_claim_age: 67`; claiming age is a scenario
-variable (overlays), not something to settle now.
+Each earner pulls TWO things from ssa.gov: the Retirement Calculator estimate (the PDF
+is easiest to share) and the year-by-year **earnings record** (Taxed Social Security
+Earnings column, pasted as text). Enter the age-67 estimate as `ss_pia_monthly` AND the
+record as `ss_earnings_history: {year: amount, ...}` - with the record present the
+engine recomputes the PIA per scenario, so early-retirement overlays automatically get
+the honest (lower) benefit instead of SSA's continued-earnings figure. Cross-check:
+the recompute at work-to-claim should land within ~1% of SSA's estimate. If only the
+estimate is available, enter it and log in `knowledge/assumptions.md` that early
+retirement is flattered until the record arrives. Default `ss_claim_age: 67`; claiming
+age is a scenario variable (overlays), not something to settle now.
 
 ## Phase 6 — Known events
+
+Always capture the house: current value (Zillow or similar, dated), mortgage balance,
+rate, P&I, escrow, and payoff date -> a "House" section in `knowledge/facts.md`. The
+engine's net worth excludes it; total-balance-sheet reporting needs it.
 
 College (per-kid cost × academic years, `education: true`), planned moves, home
 sales/purchases, expected windfalls or inheritances (`events` with `taxable_as`),
@@ -155,8 +184,10 @@ Mostly defaults; confirm rather than interrogate:
 - Spending policy `fixed_real` to start; mention `guardrail` exists as a later overlay.
 - Roth conversions: `type: none` in base — conversions are overlay territory, and
   consequential conversion plans go on `knowledge/open-questions.md` for a CPA.
-- Market assumptions: keep the defaults unless the user objects; record them as
-  assumptions.
+- Market assumptions: copy the full `market:` block from `scenarios/examples/base.yaml`
+  into base.yaml explicitly (return/vol per asset, inflation, the asset correlations,
+  2,000 MC paths, historical source). The schema defaults omit correlations (zero) and
+  use 1,000 paths, which silently changes Monte Carlo results. Record as assumptions.
 - Taxes: `regime: us_federal`, set `state` (currently only `none`/`michigan` are
   implemented — if the user lives elsewhere, set `none`, tell them state tax is not
   modeled, and log it prominently in assumptions and open-questions). Adding a state is

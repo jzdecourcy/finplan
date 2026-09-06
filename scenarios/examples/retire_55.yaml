@@ -1,8 +1,9 @@
 # EXAMPLE overlay: both retire at 55, with private health premiums until Medicare.
-#   plan run -f scenarios/examples/base.yaml -f scenarios/examples/retire_at_55.yaml
+#   plan run -f scenarios/examples/base.yaml -f scenarios/examples/retire_55.yaml
 # Overlays are partial configs: list items deep-merge by id, scalars replace.
 meta:
-  name: example-retire-at-55
+  name: retire_55
+  description: "Both retire at 55, private health premiums until Medicare"
 
 household:
   people:

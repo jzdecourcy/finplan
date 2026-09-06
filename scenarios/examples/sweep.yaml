@@ -1,0 +1,26 @@
+# Example sweep spec for `plan sweep`.
+#
+#   plan sweep -f scenarios/examples/base.yaml --spec scenarios/examples/sweep.yaml --mode det
+#
+# LEVERS are choices the household controls; their options are crossed into a grid.
+# STRESS conditions are assumptions it does not control; every cell is re-run under
+# each one, and cells are ranked by their WORST-CASE success across the set. The first
+# stress entry is the reference condition (estate / tax columns are read from it).
+#
+# Overlay names resolve to <spec dir>/../overlays/<name>.yaml; a name ending in .yaml
+# is a path relative to the spec file instead (used here so the example is self-contained).
+name: example_grid
+mode: mc
+seed: 42
+paths: 500
+noise_seeds: 2
+frontier_within: retire      # lever to condition the frontier on (default: the first lever)
+fixed: []                    # overlays applied to every cell (held constant, not crossed)
+
+levers:
+  retire:
+    - { label: base, overlays: [] }
+    - { label: r55, overlays: [retire_55.yaml] }
+
+stress:
+  - { label: base, overlays: [] }

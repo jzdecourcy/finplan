@@ -79,6 +79,23 @@ policies:
   roth_conversion:
     type: none
 
+market:
+  deterministic:
+    real_returns: { stocks: 0.05, bonds: 0.015, cash: 0.0 }
+    inflation: 0.025
+  monte_carlo:
+    n_paths: 2000
+    assets:
+      stocks: { real_mean: 0.05, vol: 0.17 }
+      bonds: { real_mean: 0.015, vol: 0.06 }
+      cash: { real_mean: 0.0, vol: 0.01 }
+    inflation_mean: 0.025
+    inflation_vol: 0.015
+    correlation: { stocks_bonds: -0.10, stocks_inflation: -0.20, bonds_inflation: -0.40 }
+  historical:
+    source: shiller
+    window: rolling
+
 taxes:
   regime: us_federal
   state: michigan      # only none/michigan implemented; elsewhere use none + log it

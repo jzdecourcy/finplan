@@ -148,6 +148,66 @@ def compare(files, scenarios, mode, seed, n_paths, out_dir) -> None:
     click.echo(f"\nreport -> {report}")
 
 
+@cli.command()
+@click.option("-f", "--file", "files", multiple=True, type=click.Path(exists=True))
+@click.option("--spec", "spec_path", required=True, type=click.Path(exists=True),
+              help="sweep spec YAML (see scenarios/sweeps/)")
+@click.option("--mode", type=click.Choice(["det", "mc", "hist"]), default=None,
+              help="override the spec's mode (det is a fast smoke pass)")
+@click.option("--seed", type=int, default=None, help="override the spec's seed")
+@click.option("--paths", "n_paths", type=int, default=None, help="override the spec's MC path count")
+@click.option("--workers", type=int, default=None, help="parallel processes (default: cpus-2)")
+@click.option("-o", "--out", "out_dir", type=click.Path(), default=None)
+def sweep(files, spec_path, mode, seed, n_paths, workers, out_dir) -> None:
+    """Cross a grid of decision overlays under several stress conditions; report the frontier."""
+    from finplan.sweep import enumerate_cells, load_spec, run_sweep
+
+    try:
+        spec = load_spec(spec_path)
+    except ConfigError as e:
+        raise click.ClickException(str(e)) from None
+    if mode:
+        spec.mode = mode
+    if seed is not None:
+        spec.seed = seed
+    if n_paths is not None:
+        spec.paths = n_paths
+    if out_dir is None:
+        out_dir = f"runs/{dt.date.today().isoformat()}-sweep-{spec.name}"
+    n_cells = len(enumerate_cells(spec))
+    click.echo(f"sweep {spec.name}: {n_cells} cells x {len(spec.stress)} stress conditions "
+               f"= {n_cells * len(spec.stress)} runs ({spec.mode}, seed {spec.seed}, "
+               f"paths {spec.paths or 'config'})")
+
+    def progress(i, n):
+        if i == n or i % max(1, n // 20) == 0:
+            click.echo(f"  {i}/{n}", err=True)
+
+    try:
+        res = run_sweep(_config_files(files), spec, out_dir, workers=workers, progress=progress)
+    except ConfigError as e:
+        raise click.ClickException(str(e)) from None
+    pd_opts = {"display.width": 200, "display.max_columns": 30, "display.max_rows": 200}
+    import pandas as pd
+
+    hide = ["frontier", "frontier_within", "first_failure"]
+    with pd.option_context(*[x for kv in pd_opts.items() for x in kv]):
+        click.echo("\n== global frontier (worst-case success vs. reference median terminal) ==")
+        click.echo(res["frontier"].drop(columns=hide).to_string())
+        w = res["within"]
+        click.echo(f"\n== lookup: best cell per {w}, success under each stress condition ==")
+        click.echo(res["lookup"].to_string())
+        click.echo(f"\n== frontier within each {w} (the real choice set at that {w}) ==")
+        click.echo(res["frontier_within"].drop(columns=hide).to_string())
+        click.echo("\n== main effects (average over all other levers) ==")
+        click.echo(res["effects"].to_string())
+        if res["noise"] is not None:
+            click.echo("\n== MC noise on top frontier cells (reference condition, extra seeds) ==")
+            click.echo(res["noise"].to_string())
+    m = res["meta"]
+    click.echo(f"\n{m['runs']} runs in {m['seconds']}s on {m['workers']} workers -> {out_dir}")
+
+
 @cli.command("tax-year")
 @click.option("--year", type=int, default=2026)
 @click.option("--filing", type=click.Choice(["single", "mfj"]), default="mfj")

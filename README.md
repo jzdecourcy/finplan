@@ -14,13 +14,13 @@ Claude Code (see `CLAUDE.md`; the human never edits YAML by hand).
 3. Open the repo in Claude Code and run **`/interview`** — a phased, resumable onboarding
    interview that builds your `scenarios/base.yaml` and first snapshot conversationally.
    A fictional worked example lives in `scenarios/examples/`:
-   `plan run -f scenarios/examples/base.yaml -f scenarios/examples/retire_at_55.yaml`
+   `plan run -f scenarios/examples/base.yaml -f scenarios/examples/retire_55.yaml`
 
 ## How it fits together
 
 - **Scenarios compose**: `scenarios/base.yaml` + small overlays
-  (`scenarios/overlays/retire_at_55.yaml`, ...) merged by `id`, so what-ifs stay small,
-  diffable, and mixable: `plan run -f scenarios/base.yaml -f scenarios/overlays/retire_at_55.yaml`
+  (`scenarios/overlays/retire_55.yaml`, ...) merged by `id`, so what-ifs stay small,
+  diffable, and mixable: `plan run -f scenarios/base.yaml -f scenarios/overlays/retire_55.yaml`
 - **Balances live in snapshots** (`snapshots/YYYY-MM-DD.yaml`, gitignored), refreshed via
   `plan update` (or by telling Claude, or dropping brokerage CSV exports in `inbox/`).
   The plan structure never changes for a balance update.
@@ -37,7 +37,9 @@ Claude Code (see `CLAUDE.md`; the human never edits YAML by hand).
 
 ```
 plan run      -f scenarios/base.yaml [--mode det|mc|hist] [--seed N] [-o runs/name]
-plan compare  -f scenarios/base.yaml --scenario "r55:-f scenarios/overlays/retire_at_55.yaml"
+plan compare  -f scenarios/base.yaml --scenario "r55:-f scenarios/overlays/retire_55.yaml"
+plan sweep    -f scenarios/base.yaml --spec scenarios/sweeps/grid.yaml [--mode det] [-o runs/name]
+              # cross decision levers x stress conditions; per-lever frontier + lookup tables
 plan validate / plan show-config [--diff-base]
 plan update [brokerage=462000 ...] / plan status
 plan tax-year --year 2026 --filing mfj --income wages=180000 --income ltcg=20000

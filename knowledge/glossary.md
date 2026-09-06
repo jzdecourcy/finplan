@@ -114,3 +114,46 @@ uses something not listed.
   US-government interest are all taxed differently (federally and by Michigan — MI
   exempts Treasury/SGOV interest, taxes out-of-state muni interest). Why the same yield
   isn't the same after-tax.
+
+## Sweeps (`plan sweep`)
+
+- **Lever vs. stress** — A *lever* is something the household chooses (retire age,
+  Roth ladder, guardrail, SS claim age, house move). A *stress condition* is something
+  it doesn't (how long we live, whether spending drifts up, what a volatile income
+  actually pays). A sweep crosses only the levers and re-runs every combination under
+  every stress condition. Optimising over a stress condition would be optimising the
+  weather.
+- **Cell** — One combination of lever choices, e.g. `r57+nolad+gr50+ss67+stay`. The
+  grid is every cell × every stress condition.
+- **Reference condition** — The first stress entry (normally plain base). Estate and
+  tax columns in the summary are read from it.
+- **Worst-case success** — The lowest success % a cell scores across all the stress
+  conditions. Cells are ranked on this, not on base success, so a choice that is
+  second-best everywhere beats one that is best in one world and fragile in the rest.
+- **Frontier (Pareto)** — The cells that no other cell beats on *both* worst-case success
+  and median estate at once. Every cell on it is a legitimate choice; moving along it
+  is buying estate with points, or points with estate. Cells off it are dominated.
+- **Main effect** — For one lever, the average outcome of each option with every other
+  lever averaged out. Reads as "what does picking this option cost or buy, on average."
+  Interactions (one lever mattering more given another) are what the full grid adds.
+- **MC noise band** — The same cell re-run with a few different random seeds. Any
+  difference between two cells smaller than this band is seed luck, not signal.
+
+## Portfolio and cash
+
+- **Asset classes (stocks / bonds / cash)** — The only three things the engine models.
+  Every account is a mix of them (e.g. 80/20), each with its own expected real return,
+  volatility, and correlation from base.yaml's market block. No funds, durations, or
+  yield curves exist inside the model: a Treasury fund is labeled "bonds" (intermediate
+  behavior) or "cash" (T-bill behavior), and a short-term fund has to be one or the
+  other. Fine over decades; would need a fourth class if duration ever drove a decision.
+- **Emergency fund / operating buffer** — Cash kept out of the market to cover spending
+  and lumpy bills (quarterly estimated taxes) without selling anything. Typically 6-12
+  months of spending; sweeping the `cash_*` overlay family prices how much more than
+  that is worth holding (usually nothing in points, and it costs estate).
+- **Lump sum vs dollar-cost averaging** — Investing all at once vs in tranches over
+  months. Lump sum wins on average (money is in the market longer); tranches are a
+  regret hedge, cheap if spread over a few months, costly if over years.
+- **I-bond fixed rate** — The permanent above-inflation part of a Series I bond's yield,
+  set at issue. A 0% fixed rate means the bond earns exactly inflation — the engine's
+  0% real cash return — tax-deferred and state-exempt.
