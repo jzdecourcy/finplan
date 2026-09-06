@@ -157,3 +157,13 @@ uses something not listed.
 - **I-bond fixed rate** — The permanent above-inflation part of a Series I bond's yield,
   set at issue. A 0% fixed rate means the bond earns exactly inflation — the engine's
   0% real cash return — tax-deferred and state-exempt.
+- **Rule of 55** — Leave your employer in or after the calendar year you turn 55 and
+  that employer's 401(k) can be tapped without the 10% early-withdrawal penalty
+  (normal income tax still applies). Only that plan — never IRAs, and rolling the
+  money to an IRA forfeits it. Modeled via `rule_of_55: true` on the current employer's 401(k)s;
+  only usable in practice if the plan allows partial withdrawals (open question).
+- **72(t) / SEPP** — "Substantially Equal Periodic Payments": commit to fixed annual
+  withdrawals from a traditional IRA and the 10% penalty is waived at ANY age — but
+  the payments must run untouched for at least 5 years or until 59½, whichever is
+  later, or all the waived penalties come back with interest. The escape hatch for
+  retiring before 55; rigid, so a CPA computes the number. Modeled via `policies.sepp`.
