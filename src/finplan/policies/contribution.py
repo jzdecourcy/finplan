@@ -26,7 +26,8 @@ class PlannedContributions:
     wage_reduction: float = 0.0          # pre-tax deferrals (income tax base shrinks)
     cash_out_posttax: float = 0.0        # after-tax payroll contributions (Roth 401k)
     cash_out_529: float = 0.0            # after-tax cash consumed by 529 contributions
-    mi_529_deductible: float = 0.0
+    mi_529_deductible: float = 0.0       # GROSS 529 contributions; the simulator nets
+                                         # same-year qualified draws per account (MI line 17)
     by_account: dict[str, float] = field(default_factory=dict)
     total: float = 0.0
 

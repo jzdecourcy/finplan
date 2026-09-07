@@ -293,6 +293,7 @@ class Simulation:
             # left (no beneficiary named, or their account is empty) may draw from any
             # 529 (sibling transfer, penalty-free for qualified expenses).
             education_from_529 = 0.0
+            draws_529: dict[str, float] = {}
             if education_out > 0:
                 plans = [a for a in state.accounts if a.type is AccountType.PLAN_529]
                 unmet = 0.0
@@ -305,6 +306,7 @@ class Simulation:
                                 res = acct.withdraw(need, qualified=True)
                                 need -= res.amount
                                 education_from_529 += res.amount
+                                draws_529[acct.id] = draws_529.get(acct.id, 0.0) + res.amount
                     unmet += need
                 for acct in plans:
                     if unmet <= 0:
@@ -312,7 +314,17 @@ class Simulation:
                     res = acct.withdraw(unmet, qualified=True)
                     unmet -= res.amount
                     education_from_529 += res.amount
+                    draws_529[acct.id] = draws_529.get(acct.id, 0.0) + res.amount
             led.spending = general_spend + education_out
+            # MI Schedule 1 line 17: the MESP deduction is contributions LESS qualified
+            # withdrawals (and rollovers) in the same tax year, netted per account
+            # (TY2025 Schedule 1 instructions). Contributing to a plan you are drawing
+            # from earns nothing; contributing to a plan with no draws that year does.
+            net_529 = sum(
+                max(0.0, planned.by_account.get(a.id, 0.0) - draws_529.get(a.id, 0.0))
+                for a in state.accounts if a.type is AccountType.PLAN_529
+            )
+            tax_input = replace(tax_input, mi_529_contributions=net_529)
 
             # 7-8. fund the gap; final tax
             inflows = (

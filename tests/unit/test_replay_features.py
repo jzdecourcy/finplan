@@ -143,3 +143,28 @@ def test_monte_carlo_defaults_are_calibrated():
     assert mc.correlation == {"stocks_bonds": -0.10, "stocks_inflation": -0.20,
                               "bonds_inflation": -0.40}
     assert MonteCarloMarketCfg(correlation={}).correlation == {}
+
+
+def _mi_state_tax(cfg):
+    return run(cfg, mode="det").ledger.set_index("year")["tax_state"]
+
+
+def test_mi_529_deduction_nets_same_year_qualified_draws_per_account():
+    """MI Schedule 1 line 17: contributions less qualified withdrawals, net per account.
+    A $10k contribution into the plan being drawn earns nothing; the same $10k into
+    the sibling's untouched plan earns the full deduction (4.25% x $10k = $425)."""
+    college = [
+        {"id": "living", "annual": 50_000, "start": 2026, "end": "death"},
+        {"id": "college-kid1", "annual": 20_000, "start": 2026, "end": 2026,
+         "education": True, "beneficiary": "kid1"},
+    ]
+    policies = lambda acct: {  # noqa: E731
+        "withdrawal": {"order": ["cash", "taxable", "traditional", "roth", "hsa"]},
+        "contribution": {"pretax": [], "posttax": [], "priority": ["cash"],
+                         "plan_529": [{"account": acct, "amount": 10_000, "end": 2026}]},
+    }
+    none = _mi_state_tax(_base(expenses=college))
+    into_drawn = _mi_state_tax(_base(expenses=college, policies=policies("529-kid1")))
+    into_other = _mi_state_tax(_base(expenses=college, policies=policies("529-kid2")))
+    assert into_drawn.loc[2026] == pytest.approx(none.loc[2026])
+    assert none.loc[2026] - into_other.loc[2026] == pytest.approx(0.0425 * 10_000, abs=1)

@@ -95,3 +95,6 @@ log it in assumptions — adding a state is a code project: module under
 Standard deduction only; no AMT; average-cost basis; no loss carryforwards; annual steps.
 Cash accounts grow at the modeled cash return, not their APY. Only one federal
 parameter year ships (2026), so prior-year returns reconcile approximately.
+Michigan's 529 deduction is netted against same-year qualified draws per account
+(Schedule 1 line 17), but the line 8 add-back of non-qualified withdrawals and the
+529-to-Roth rollover are not modeled; 529s are drawn only for education-tagged spending.

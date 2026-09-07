@@ -167,3 +167,15 @@ uses something not listed.
   the payments must run untouched for at least 5 years or until 59Â½, whichever is
   later, or all the waived penalties come back with interest. The escape hatch for
   retiring before 55; rigid, so a CPA computes the number. Modeled via `policies.sepp`.
+- **MESP netting rule (Michigan 529 deduction)** — Michigan lets you deduct 529
+  contributions (Schedule 1 line 17, $10k/yr on a joint return, worth 4.25% = $425)
+  but only the amount contributed *minus* qualified withdrawals and rollovers from the
+  *same account* in the *same tax year*. Contributing to a plan you are drawing for
+  tuition that year earns nothing; the engine applies this netting.
+- **529 non-qualified withdrawal** — Taking 529 money for anything other than qualified
+  education: the earnings portion is ordinary income plus a 10% federal penalty, and
+  Michigan adds back any amount you previously deducted (Schedule 1 line 8). The
+  engine never does this on its own; a 529 is only drawn for education-tagged expenses.
+- **529-to-Roth rollover** — Since 2024, leftover 529 money can move to the
+  beneficiary's Roth IRA: $35k lifetime per beneficiary, the account must be 15+ years
+  old, paced at the annual IRA limit, and the kid needs earned income. Not modeled.

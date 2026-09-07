@@ -25,6 +25,11 @@ senior_standard_deduction:
 
 # MESP + MI 529 Advisor Plan combined cap (2025 Schedule 1 instructions line 17;
 # statutory, long-stable; TY2026 instructions not yet published - reverify Dec 2026).
+# Line 17 deducts contributions LESS qualified withdrawals and rollovers made in the
+# same tax year, "net for each Michigan 529 account separately" - the engine applies
+# that netting. Line 8 (ADDITION of non-qualified withdrawals to the extent previously
+# deducted) is NOT modeled: the engine never draws 529s for non-education spending
+# unless "529" is put in the withdrawal order.
 mesp_529_deduction:
   single: 5000
   mfj: 10000
