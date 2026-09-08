@@ -23,6 +23,13 @@ uses something not listed.
   out); nominal = the sticker price in that future year. All results are reported real.
   Spending inputs are real (they auto-grow with inflation); a fixed mortgage payment is
   nominal (inflation shrinks it in real terms).
+- **Success threshold** — The success % a household treats as "green light." 100% is
+  not the standard: industry practice reads ~85%+ as comfortable, 70–85% as workable
+  with monitoring, below 70% as rework. The metric measures the odds a ROBOTIC
+  spender runs short, not ruin — real households adjust yearly, failures arrive
+  late with Social Security still underneath, and the model excludes home equity
+  and any private-business stake valued at $0. Chasing the last few points costs
+  years of work.
 
 ## Simulation modes
 
@@ -58,6 +65,10 @@ uses something not listed.
 - **Withdrawal order** — Which pot pays for retirement first: cash → taxable →
   traditional → Roth → HSA. Roth and HSA go last because tax-free compounding is most
   valuable given the longest runway.
+- **Overlay naming** — File stems are `<family>_<value>` in snake_case (`retire_57`,
+  `roth_ladder_22`, `move_2030_mortgage`, `ss_70`); the family is the lever being
+  pulled. `meta.name` always equals the stem and `meta.description` is the one-line
+  plain-English summary reports and tools show.
 
 ## Income & business
 
@@ -74,6 +85,16 @@ uses something not listed.
   Full Retirement Age (67). Claiming early cuts it; each year of delay past FRA adds 8%
   (to 70). SSA estimates assume earnings continue until claiming — retiring
   early shaves the real figure.
+- **Buy-sell agreement** — The contract between co-owners of a private company that
+  says who must buy a departing owner's shares, at what price, and how it's paid, on
+  death, disability, divorce, or bankruptcy. Often funded by life insurance on each
+  owner. Read it for what it does NOT cover — many are silent on voluntary retirement.
+- **Stated value vs appraised value** — Buy-sell price can be a number the owners
+  re-sign each year (stated value) or, if that lapses, a formal appraisal of fair
+  market value. Whether the annual re-signing happened decides which one applies.
+- **Passive K-1 tail** — Keeping S-corp shares after you stop working there, so the
+  pro-rata K-1 income and distributions continue. Model it as a `scorp_tail` overlay
+  family (a stress condition, not a lever — the other owners control distributions).
 
 ## Tax strategies
 
@@ -114,6 +135,31 @@ uses something not listed.
   US-government interest are all taxed differently (federally and by Michigan — MI
   exempts Treasury/SGOV interest, taxes out-of-state muni interest). Why the same yield
   isn't the same after-tax.
+- **Capital-gain distribution** — An actively managed fund/CEF sells winners inside the
+  fund and passes the realized gains to you every December (1099-DIV box 2a); you pay
+  LTCG tax on them even though you sold nothing and the cash was reinvested. The tax
+  drag of active funds vs index ETFs — modeled as the `ltcg_distributions` yield on a
+  taxable account. The reinvested amount raises cost basis, so lifetime gain is
+  unchanged; you just pay the tax decades earlier.
+- **Roth catch-up rule (SECURE 2.0 §603)** — From 2026, the extra 401k "catch-up"
+  contribution allowed at 50+ must go in as Roth (after-tax) — but only for people
+  whose prior-year W-2 wages from the employer sponsoring the plan topped $145k
+  (indexed upward each year). Under the threshold, catch-ups can stay pre-tax.
+  Only the catch-up slice is ever affected; the regular deferral limit can always
+  be pre-tax. K-1 pass-through income and a spouse's wages don't count toward the
+  wage test.
+- **Mega backdoor Roth** — A 401k feature, not a law: the plan lets you add *after-tax*
+  (non-Roth) contributions above the normal deferral limit, up to the overall annual-
+  additions cap, and then convert them to Roth inside the plan or roll them to a Roth
+  IRA. Needs the plan document to allow both steps. Unlike the IRA backdoor it does not
+  trip the pro-rata rule. Model it as a `contrib_*` overlay.
+- **Annual additions limit (§415(c))** — The cap on everything going into one person's
+  401k in a year: your deferrals, employer match, and after-tax contributions combined
+  ($72,000 for 2026). Age-50 catch-up sits on top of it.
+- **ACP test** — Nondiscrimination test comparing highly compensated employees' match
+  and after-tax contribution rates with everyone else's. Safe-harbor plans skip it for
+  deferrals and match, but NOT for after-tax contributions — the usual reason a mega
+  backdoor fails at a small company.
 
 ## Sweeps (`plan sweep`)
 
@@ -179,3 +225,45 @@ uses something not listed.
 - **529-to-Roth rollover** — Since 2024, leftover 529 money can move to the
   beneficiary's Roth IRA: $35k lifetime per beneficiary, the account must be 15+ years
   old, paced at the annual IRA limit, and the kid needs earned income. Not modeled.
+- **Cash deployment tiers (hold / reserve / deploy / lean)** — The `cash_*` overlay
+  family: how much of today's cash stays cash. *reserve* also parks money for a known
+  near-term outlay (a house gap); *lean* keeps only ~3 months. Sweep it rather than
+  guess; the usual verdict is deploy, and lean adds nothing.
+
+## Estate and gifting
+
+- **Step-up in basis** — When someone dies, the cost basis of assets they held in
+  taxable accounts (brokerage shares, the house) resets to the value on the date of
+  death, so all the gain built up during their life is never taxed. Does not apply to
+  IRAs, 401ks, or Roths. The reason appreciated stock is better bequeathed than gifted
+  or sold late in life.
+- **10-year rule** — Since the SECURE Act (2020), a child who inherits an IRA or 401k
+  must empty it within 10 years of the owner's death (with annual minimums if the owner
+  had reached RMD age). Pre-tax money comes out as ordinary income on the child's
+  return; inherited Roth money comes out tax-free. Spouses are exempt. The estate-side
+  case for shifting pre-tax money to Roth and taxable.
+- **Annual gift exclusion** — The amount one person can give another each year with no
+  gift-tax filing ($19,000 in 2026; a couple can give $38,000 to each child). Funding
+  a kid's Roth IRA contribution is a gift of that size, well under the exclusion.
+- **Lifetime gift/estate exemption** — The total a person can give away above the
+  annual exclusions, during life plus at death, before any gift or estate tax is owed
+  ($15M per person from 2026, indexed; unused amount is portable to the surviving
+  spouse). Gifts above the annual exclusion are reported on Form 709 and reduce it;
+  no tax is paid until it is used up.
+- **Gift splitting** — A married couple treating one spouse's gift as half from each,
+  doubling the annual exclusion. Automatic for gifts from a joint account; from a
+  separately titled account it needs a Form 709 election.
+- **Direct-payment exclusion** — Tuition paid straight to a school, or medical bills
+  paid straight to the provider, for anyone, are not gifts at all and are unlimited.
+  Paying the kid and letting them pay the school IS a gift.
+- **Kiddie tax** — Investment income of a child under 19 (or under 24 if a full-time
+  student) above a small threshold is taxed at the parents' rate. Defeats gifting
+  appreciated stock to a college kid to sell at their 0% capital-gains rate.
+- **Lady Bird deed** — An enhanced life-estate deed (Michigan, Florida, Texas and a few
+  other states): the owner keeps full control of the house (can sell, mortgage, change
+  their mind) and it passes to the named person at death without probate, still
+  getting the step-up. Cheaper than a trust for a single asset.
+- **Uncapping (Michigan)** — Michigan resets a property's taxable value to 50% of
+  market value when ownership transfers, ending the inflation cap accumulated since
+  purchase. Transfers of residential property to close relatives are exempt if the use
+  stays residential.

@@ -35,7 +35,7 @@ runs the engine, and explains results.
   `meta.description` is a required one-liner (quote it if it contains a colon). The
   first comment lines stay for the long story. `tests/unit/test_overlay_naming.py`
   enforces this. Typical families: retire, ss, horizon, spend, earn, roth_ladder,
-  withdraw, guardrail, contrib, cash, move, aca.
+  withdraw, guardrail, contrib, cash, move, aca, scorp, college, gift.
 - `scenarios/sweeps/*.yaml` — sweep specs for `plan sweep`: `levers` (choices the
   household controls, crossed) and `stress` (assumptions it doesn't, each cell re-run
   under every one; first entry = reference). Classify a new overlay family as lever or
