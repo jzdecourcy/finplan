@@ -60,6 +60,13 @@ Ask: who's in the household (names, birth years)? Filing status (single/mfj)? Ki
 (names, birth years — they matter for 529s, ACA household size, college timing)?
 Target retirement age for each earner — **say out loud that this is a placeholder**:
 retirement timing is usually the main scenario variable, not a commitment.
+For a couple, ALSO ask: **do you intend to stop working in the same year, or each at
+your own age?** The answer decides how the retirement lever is framed later: a joint
+stop year (`retire_together_YYYY` overlays: each person's retirement_age = YYYY minus
+their birth year) versus each-at-age-NN (`retire_NN` overlays). With an age gap the two
+framings differ by that many working years for one spouse, which is worth points; a
+"retire at 57" sweep silently stops the older spouse first. Record the preference in
+`knowledge/facts.md`.
 
 Write: `sim` (start_year = current year, horizon: death), `household`, `meta`.
 Life expectancy defaults to 95; only change it if the user brings it up.
