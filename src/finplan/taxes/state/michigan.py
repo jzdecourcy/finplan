@@ -28,7 +28,8 @@ def michigan_tax(
 ) -> float:
     ages = list(inp.ages.values()) or [0]
     oldest = max(ages)
-    n_exemptions = max(1, len(inp.ages))
+    # MI-1040 line 9a: one exemption per filer plus one per claimable dependent.
+    n_exemptions = max(1, len(inp.ages)) + max(0, int(inp.dependents))
     exemptions = n_exemptions * params["personal_exemption"]
 
     # US-government-obligation interest (Treasuries, SGOV) is MI-exempt; non-Michigan
@@ -39,7 +40,9 @@ def michigan_tax(
         + inp.us_gov_interest
         + min(inp.mi_529_contributions, params["mesp_529_deduction"][filing])
     )
-    additions = inp.tax_exempt_interest
+    # Sch 1 line 1: non-MI muni interest. Line 2: income taxes deducted at the entity
+    # level (e.g. an S-corp's flow-through-entity or other-state tax on the K-1).
+    additions = inp.tax_exempt_interest + max(0.0, inp.state_tax_addback)
 
     # Method 1: capped retirement subtraction
     rs = params["retirement_subtraction"]

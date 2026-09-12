@@ -13,6 +13,11 @@ sim:
 
 household:
   filing_status: mfj
+  # Children claimed on the return. They drive state personal exemptions and the
+  # default ACA tax-family size; claimable_through_age 18 is the common case, 23 if a
+  # full-time student stays on the return through college.
+  # dependents:
+  #   - { name: kid, birth_year: 2010, claimable_through_age: 18 }
   people:
     - name: sam
       birth_year: 1980
@@ -51,6 +56,11 @@ income:
       start: 2026, end: retirement }
   - { id: salary-riley, owner: riley, kind: salary, annual: 85000,
       start: 2026, end: retirement }
+  # Pass-through business income (K-1): fica: false; phantom: true if the share is
+  # taxed but not distributed; state_tax_addback adds that fraction of the income back
+  # on the state return when the entity pays state tax at its own level (e.g. MI Sch 1).
+  # - { id: k1-sam, owner: sam, kind: other, annual: 60000, start: 2026, end: retirement,
+  #     fica: false, state_tax_addback: 0.05 }
 
 expenses:
   - { id: living-fixed, annual: 70000, start: 2026, end: death }
@@ -100,3 +110,11 @@ taxes:
   regime: us_federal
   state: michigan      # only none/michigan implemented; elsewhere use none + log it
   base_params_year: 2026
+  # Medicare IRMAA (Part B/D income surcharge) is on by default for anyone 65+ and is
+  # priced off MAGI from two years earlier. Seed prior_magi (AGI + tax-exempt interest)
+  # only if someone is already on Medicare when the simulation starts.
+  # irmaa:
+  #   enabled: true
+  #   medicare_age: 65
+  #   lookback_years: 2
+  #   prior_magi: { 2024: 180000, 2025: 175000 }

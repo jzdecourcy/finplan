@@ -38,6 +38,7 @@ def _income_streams(cfg: ScenarioConfig) -> list[IncomeStream]:
             id=s.id, annual=s.annual, start=s.start, end=s.end,
             growth_real=s.growth_real, owner=s.owner, kind=s.kind,
             taxable=s.taxable, fica=s.fica, phantom=s.phantom,
+            state_tax_addback=s.state_tax_addback,
         )
         for s in cfg.income
     ]

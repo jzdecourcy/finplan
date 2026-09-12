@@ -32,6 +32,11 @@ us_federal:
   # aca.applicable_pct / aca.cliff_fpl_ratio: ratios, deliberately NOT cpi-indexed
   # (IRS indexes the percentages annually by a premium-growth factor — not modeled;
   # recorded in knowledge/assumptions.md)
+  irmaa.tiers_single:        { index: cpi, round_to: 1000 }   # § 1839(i)(5), nearest $1,000
+  irmaa.tiers_mfj:           { index: cpi, round_to: 1000 }
+  # Surcharge dollars follow Part B cost growth, not CPI — CPI is the approximation
+  irmaa.part_b_monthly_adjustment: { index: cpi, round_to: 0.1 }
+  irmaa.part_d_monthly_adjustment: { index: cpi, round_to: 0.1 }
 
 us_mi:
   personal_exemption:       { index: cpi, round_to: 100 }

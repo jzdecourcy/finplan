@@ -4,7 +4,9 @@ Pipeline (each step a pure function in this package, individually golden-tested)
   income assembly -> taxable SS (Pub 915) -> AGI -> standard deduction ->
   ordinary/preferential split -> bracket tax + LTCG stacking -> NIIT ->
   ACA premium tax credit (refundable; active only when TaxInput carries a benchmark
-  premium + household size) -> FICA -> early-withdrawal penalties -> Michigan (optional)
+  premium + household size) -> Medicare IRMAA (when medicare_enrollees > 0; priced
+  off the two-years-back MAGI the simulator supplies) -> FICA -> early-withdrawal
+  penalties -> Michigan (optional)
 """
 
 from __future__ import annotations
@@ -14,6 +16,7 @@ from dataclasses import replace
 from finplan.taxes import aca as aca_mod
 from finplan.taxes import federal as fed
 from finplan.taxes.fica import fica_tax
+from finplan.taxes.irmaa import irmaa_surcharge
 from finplan.taxes.params import index_params, load_federal, load_michigan
 from finplan.taxes.state.michigan import michigan_tax
 from finplan.taxes.types import TaxInput, TaxResult
@@ -25,15 +28,21 @@ def compute_year_tax(inp: TaxInput, params: dict, mi_params: dict | None = None)
     filing = inp.filing_status.value
     ages = list(inp.ages.values())
 
-    net_gains = inp.realized_ltcg + inp.realized_stcg
+    # Capital gains: prior-year carryforward (treated as long-term) nets against this
+    # year's gains first; a net loss offsets up to $3,000 of ordinary income and the
+    # remainder carries forward (Schedule D lines 16/21 and the Capital Loss Carryover
+    # Worksheet). Short-term gains are ordinary; long-term ride the preferential rates.
+    net_gains = inp.realized_ltcg + inp.realized_stcg - inp.capital_loss_carryforward
+    carryforward_out = 0.0
     if net_gains >= 0:
-        stcg_ordinary = max(0.0, inp.realized_stcg)
+        stcg_ordinary = max(0.0, min(inp.realized_stcg, net_gains))
         ltcg_net = net_gains - stcg_ordinary
         loss_offset = 0.0
     else:
         stcg_ordinary = 0.0
         ltcg_net = 0.0
-        loss_offset = min(_CAP_LOSS_LIMIT, -net_gains)  # no carryforward modeled
+        loss_offset = min(_CAP_LOSS_LIMIT, -net_gains)
+        carryforward_out = -net_gains - loss_offset
 
     ordinary_pre_ss = (
         inp.wages + inp.business + inp.other_ordinary + inp.interest
@@ -53,10 +62,17 @@ def compute_year_tax(inp: TaxInput, params: dict, mi_params: dict | None = None)
     deduction = fed.standard_deduction(params, filing, ages, magi, year=inp.year)
     taxable_before_qbi = max(0.0, agi - deduction)
     # QBI (s199A, permanent post-OBBBA): federal-only, below-the-line
+    # Two components (Form 8995-A): the trade/business component is capped by the W-2
+    # wage limit; qualified REIT/PTP dividends earn a flat 20% (line 31) outside that
+    # cap. Both are limited together by 20% of taxable income less net capital gain.
     qbi_deduction = 0.0
-    if inp.qbi_wage_cap is not None and inp.business > 0:
+    if inp.qbi_wage_cap is not None and (inp.business > 0 or inp.sec199a_dividends > 0):
         income_limit = 0.20 * max(0.0, taxable_before_qbi - pref)
-        qbi_deduction = min(0.20 * inp.business, inp.qbi_wage_cap, income_limit)
+        business_component = (
+            min(0.20 * inp.business, inp.qbi_wage_cap) if inp.business > 0 else 0.0
+        )
+        reit_component = 0.20 * max(0.0, inp.sec199a_dividends)
+        qbi_deduction = min(business_component + reit_component, income_limit)
     taxable_income = max(0.0, taxable_before_qbi - qbi_deduction)
     pref_taxable = min(pref, taxable_income)
     taxable_ordinary = taxable_income - pref_taxable
@@ -65,12 +81,22 @@ def compute_year_tax(inp: TaxInput, params: dict, mi_params: dict | None = None)
         fed.ordinary_tax(taxable_ordinary, params, filing)
         + fed.ltcg_tax(taxable_ordinary, pref_taxable, params, filing)
     )
-    # NIIT: taxable interest (Treasury included) and dividends/gains; muni excluded
+    # Foreign tax credit (Form 1040 line 20 via Schedule 3). Modeled as the de minimis
+    # election (Form 1116 not required when creditable foreign tax is <= $300 / $600
+    # MFJ): the full amount credits against regular tax, floored at zero. Larger
+    # amounts would be limited by the Form 1116 foreign-source ratio, which needs
+    # foreign-source income the engine does not track; assumptions.md.
+    foreign_tax_credit = min(max(0.0, inp.foreign_tax_paid), max(0.0, federal_tax))
+    federal_tax -= foreign_tax_credit
+    # NIIT (Form 8960): taxable interest (Treasury included), dividends, and net gain.
+    # A net LOSS enters only to the extent deducted on the 1040 - the $3,000 offset
+    # (Form 8960 instructions, line 5a) - so it reduces NII by at most that much.
     nii = (
         inp.interest + inp.us_gov_interest + inp.ordinary_dividends
-        + inp.qualified_dividends + max(0.0, net_gains)
+        + inp.qualified_dividends + (net_gains if net_gains >= 0 else -loss_offset)
     )
-    federal_tax += fed.niit(nii, magi, params, filing)
+    niit = fed.niit(max(0.0, nii), magi, params, filing)
+    federal_tax += niit
 
     # ACA premium tax credit (§ 36B): refundable, so federal_tax may go NEGATIVE —
     # safe downstream: the withdrawal gross-up loop treats lower tax as a smaller
@@ -85,6 +111,21 @@ def compute_year_tax(inp: TaxInput, params: dict, mi_params: dict | None = None)
         )
         federal_tax -= aca_res.credit
 
+    # Medicare IRMAA (§ 1839(i)): a premium surcharge, not a tax, but a MAGI-driven
+    # outflow the plan must fund. Keyed to the return filed two years earlier; when
+    # the simulator has no lagged MAGI yet (sim start) this year's MAGI stands in.
+    magi_irmaa = agi + inp.tax_exempt_interest
+    irmaa_res = None
+    if inp.medicare_enrollees > 0:
+        if "irmaa" not in params:
+            raise ValueError(
+                f"tax parameter file for {inp.year} has no irmaa block; add it with a "
+                "cited CMS source before modeling Medicare enrollees in that year"
+            )
+        lookback = inp.irmaa_magi if inp.irmaa_magi is not None else magi_irmaa
+        irmaa_res = irmaa_surcharge(lookback, inp.medicare_enrollees, filing, params["irmaa"])
+    irmaa_total = irmaa_res.annual_total if irmaa_res else 0.0
+
     wages_by_person = inp.wages_by_person or ({"_": inp.wages} if inp.wages else {})
     fica = fica_tax(wages_by_person, params, filing) if wages_by_person else 0.0
     penalties = params["penalties"]["early_withdrawal_rate"] * inp.penalty_base
@@ -94,7 +135,7 @@ def compute_year_tax(inp: TaxInput, params: dict, mi_params: dict | None = None)
         state_tax = michigan_tax(inp, agi, taxable_ss, mi_params, filing)
 
     return TaxResult(
-        total=federal_tax + fica + penalties + state_tax,
+        total=federal_tax + fica + penalties + state_tax + irmaa_total,
         federal=federal_tax,
         state=state_tax,
         fica=fica,
@@ -106,6 +147,12 @@ def compute_year_tax(inp: TaxInput, params: dict, mi_params: dict | None = None)
         aca_magi=aca_res.magi if aca_res else 0.0,
         aca_fpl_pct=aca_res.fpl_pct if aca_res else 0.0,
         aca_credit=aca_res.credit if aca_res else 0.0,
+        niit=niit,
+        foreign_tax_credit=foreign_tax_credit,
+        capital_loss_carryforward_out=carryforward_out,
+        magi_irmaa=magi_irmaa,
+        irmaa=irmaa_total,
+        irmaa_tier=irmaa_res.tier if irmaa_res else 0,
     )
 
 

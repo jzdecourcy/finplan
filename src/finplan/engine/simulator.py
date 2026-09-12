@@ -106,6 +106,8 @@ class Simulation:
         rmd_table = load_rmd_table()
         aca_cfg = cfg.taxes.aca
         aca_enabled = aca_cfg.enabled and any(s.aca for s in self.expenses)
+        irmaa_cfg = cfg.taxes.irmaa
+        state.magi_history.update(irmaa_cfg.prior_magi)
         prior_eoy_traditional = {
             a.id: a.balance for a in state.accounts if a.type is AccountType.TRADITIONAL
         }
@@ -138,6 +140,8 @@ class Simulation:
             wages_by_person: dict[str, float] = {}
             business_income = 0.0      # all business income (for QBI) incl. phantom
             phantom_income = 0.0       # taxable but never hits cash
+            state_tax_addback = 0.0    # MI Sch 1 line 2 addback from business streams
+            n_dependents = sum(1 for d in cfg.household.dependents if d.claimable_in(year))
             for s in self.incomes:
                 amt = s.amount_in(year, s.ctx_for(ctx), cpi)
                 if amt <= 0:
@@ -148,6 +152,7 @@ class Simulation:
                     led.wages += amt
                 elif s.kind == "business":
                     business_income += amt
+                    state_tax_addback += amt * s.state_tax_addback
                     if s.phantom:
                         phantom_income += amt
                     else:
@@ -163,12 +168,18 @@ class Simulation:
             year_returns = paths.year_returns(path_idx, i)
             inv = {"interest": 0.0, "us_gov_interest": 0.0, "muni_interest": 0.0,
                    "qualified_dividends": 0.0, "ordinary_dividends": 0.0,
-                   "ltcg_distributions": 0.0}
+                   "ltcg_distributions": 0.0, "sec199a_dividends": 0.0,
+                   "foreign_tax": 0.0}
             for acct in state.accounts:
                 if acct.type is AccountType.TAXABLE and acct.yields:
                     for cat, rate in acct.yields.items():
                         dollars = acct.balance * rate
+                        if cat == "foreign_tax":
+                            inv[cat] += dollars      # a credit, not income
+                            continue
                         inv[cat] += dollars
+                        if cat == "sec199a_dividends":   # subset of ordinary dividends
+                            inv["ordinary_dividends"] += dollars
                         acct.cost_basis += dollars   # reinvested distributions add basis
                         if cat != "ltcg_distributions":  # LTCG lands in realized_ltcg
                             led.interest_dividends += dollars
@@ -230,8 +241,17 @@ class Simulation:
                 aca_size = next(
                     (st.size for st in aca_cfg.household_size_schedule
                      if year <= resolve(st.through, ctx)),
-                    aca_cfg.household_size or len(hh.people),
+                    aca_cfg.household_size or (len(hh.people) + n_dependents),
                 )
+
+            # Medicare IRMAA: enrollee count this year, MAGI from the lagged return
+            # (None in the first sim years unless taxes.irmaa.prior_magi seeds it).
+            medicare_enrollees = 0
+            if irmaa_cfg.enabled:
+                medicare_enrollees = sum(
+                    1 for p in hh.people if ages[p.name] >= irmaa_cfg.medicare_age
+                )
+            irmaa_magi = state.magi_history.get(year - irmaa_cfg.lookback_years)
 
             # 5. Roth conversions (policy sees wages, RMDs — income so far)
             base_inp = TaxInput(
@@ -255,11 +275,18 @@ class Simulation:
                 # fund cap-gain distributions: recognized annually as LTCG (reinvested,
                 # basis already stepped up above); withdrawal gains stack on top
                 realized_ltcg=inv["ltcg_distributions"],
+                capital_loss_carryforward=state.capital_loss_carryforward,
+                sec199a_dividends=inv["sec199a_dividends"],
+                foreign_tax_paid=inv["foreign_tax"],
+                dependents=n_dependents,
+                state_tax_addback=state_tax_addback,
                 traditional_distributions=rmd_total + sepp_total,
                 ss_benefits=led.ss_benefits,
                 mi_529_contributions=planned.mi_529_deductible,
                 aca_benchmark_premium=aca_premium,
                 aca_household_size=aca_size,
+                medicare_enrollees=medicare_enrollees,
+                irmaa_magi=irmaa_magi,
             )
             conv_amount = conversion.conversion_amount(
                 year, ctx, state, self.tax_engine, base_inp
@@ -348,6 +375,13 @@ class Simulation:
             led.aca_magi = funding.tax.aca_magi
             led.aca_fpl_pct = funding.tax.aca_fpl_pct
             led.aca_credit = funding.tax.aca_credit
+            led.foreign_tax_credit = funding.tax.foreign_tax_credit
+            led.capital_loss_carryforward = funding.tax.capital_loss_carryforward_out
+            state.capital_loss_carryforward = funding.tax.capital_loss_carryforward_out
+            led.magi_irmaa = funding.tax.magi_irmaa
+            led.tax_irmaa = funding.tax.irmaa
+            led.irmaa_tier = funding.tax.irmaa_tier
+            state.magi_history[year] = funding.tax.magi_irmaa
             if hasattr(self.tax_engine, "marginals"):
                 final_inp = WithdrawalPolicy._input_with_withdrawals(tax_input, funding)
                 led.marginal_rate_ordinary, _ = self.tax_engine.marginals(final_inp)

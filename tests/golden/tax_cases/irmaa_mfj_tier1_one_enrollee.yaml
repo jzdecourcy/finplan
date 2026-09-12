@@ -1,0 +1,18 @@
+name: irmaa-mfj-tier1-one-enrollee
+source: >-
+  CMS fact sheet 2025-11-14 (2026 Parts A & B premiums): joint MAGI greater than
+  218,000 and at most 274,000 -> Part B adjustment 81.20/mo, Part D 14.50/mo.
+  One spouse on Medicare (66), the other 63. Lagged MAGI 250,000 -> tier 1:
+  (81.20 + 14.50) x 12 = 1,148.40 for one enrollee. This year's own income is
+  irrelevant to the surcharge - only the lookback MAGI is priced.
+params_year: 2026
+input:
+  filing_status: mfj
+  ages: { p0: 66, p1: 63 }
+  traditional_distributions: 60000
+  medicare_enrollees: 1
+  irmaa_magi: 250000
+expected:
+  irmaa_tier: 1
+  irmaa: 1148.40
+tolerance: 0.01

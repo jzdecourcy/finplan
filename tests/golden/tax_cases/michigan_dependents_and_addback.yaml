@@ -1,0 +1,19 @@
+name: michigan-dependents-and-entity-tax-addback
+source: >-
+  2026 MI-1040 line 9a: $5,900 per exemption, filers plus dependents. Schedule 1
+  line 2: income taxes deducted at the entity level on a K-1 are an addition.
+  Wages 100,000, business 200,000 with 10,000 of entity-level state tax added
+  back, 2 filers + 2 dependents = 4 x 5,900 = 23,600. MI taxable = 300,000 +
+  10,000 - 23,600 = 286,400; tax = 0.0425 x 286,400 = 12,172.
+params_year: 2026
+state: michigan
+input:
+  filing_status: mfj
+  ages: { p0: 48, p1: 50 }
+  wages: 100000
+  business: 200000
+  dependents: 2
+  state_tax_addback: 10000
+expected:
+  state: 12172
+tolerance: 1.0

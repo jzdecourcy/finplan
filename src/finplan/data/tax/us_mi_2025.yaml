@@ -1,6 +1,6 @@
 # Michigan individual income tax parameters, TAX YEAR 2025. Verified against primary
 # sources 2026-09-11 — see `sources`. Do not edit without a cited source + green tests.
-# Added so filed 2025 returns can be reconciled; structure mirrors us_mi_2026.yaml.
+# Added for the 2025 filed-return reconciliation; structure mirrors us_mi_2026.yaml.
 year: 2025
 
 rate: 0.0425                  # MI-1040 (2025) line 17: "Multiply line 16 by 4.25%"
@@ -33,4 +33,4 @@ sources:
   - "Michigan Treasury, 2025 Tier III / Phase-In Subtraction page ('For 2025 those amounts are $49,423 if single or married filing separately, $98,846 if married filing jointly'; 75% of private pension limits; born 1946-1966): https://www.michigan.gov/taxes/iit/tax-guidance/tax-situations/retirement-and-pension-benefits/2025/2025-tier-iii"
   - "2025 Form 4884 (Worksheet 3.1 maximum $20,000 single / $40,000 joint): https://www.michigan.gov/taxes/-/media/Project/Websites/taxes/Forms/IIT/TY2025/4884.pdf"
   - "2025 MI Schedule 1 instructions (529 line 17 cap): https://www.michigan.gov/taxes/-/media/Project/Websites/taxes/Forms/IIT/TY2025/Schedule-1-Instr.pdf"
-  - "Verified 2026-09-11: figures read from the michigan.gov pages in a browser session "
+  - "Verified 2026-09-11: figures read from the michigan.gov pages in a browser session and from the filed 2025 MI-1040"

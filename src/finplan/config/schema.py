@@ -42,13 +42,32 @@ class PersonCfg(StrictModel):
     life_expectancy_age: int = 95
 
 
+class DependentCfg(StrictModel):
+    name: str
+    birth_year: int
+    # Last age (at year end) the child is claimed as a dependent. 18 matches the
+    # common case; 23 if a full-time student is still claimed through college.
+    claimable_through_age: int = 18
+
+    def claimable_in(self, year: int) -> bool:
+        return 0 <= (year - self.birth_year) <= self.claimable_through_age
+
+
 class HouseholdCfg(StrictModel):
     filing_status: Literal["single", "mfj"]
     people: list[PersonCfg] = Field(min_length=1, max_length=2)
+    # Dependents count toward Michigan personal exemptions and the default ACA
+    # tax-family size. (Federal child credit is not modeled - phased out at the
+    # incomes this engine targets.)
+    dependents: list[DependentCfg] = []
 
 
 _YIELD_KEYS = {"interest", "us_gov_interest", "muni_interest",
-               "qualified_dividends", "ordinary_dividends", "ltcg_distributions"}
+               "qualified_dividends", "ordinary_dividends", "ltcg_distributions",
+               # REIT/PTP dividends (1099-DIV box 5): ordinary income that also earns the
+               # 20% s199A deduction. foreign_tax: creditable foreign tax withheld
+               # (1099-DIV box 7) as a fraction of balance; NOT income, a credit.
+               "sec199a_dividends", "foreign_tax"}
 
 
 class AccountCfg(StrictModel):
@@ -76,6 +95,13 @@ class AccountCfg(StrictModel):
             if bad:
                 raise ValueError(f"account {self.id!r}: unknown yield keys {sorted(bad)}; "
                                  f"allowed: {sorted(_YIELD_KEYS)}")
+        if self.allocation is not None:
+            total = sum(self.allocation.values())
+            if abs(total - 1.0) > 0.01:
+                raise ValueError(
+                    f"account {self.id!r}: allocation weights sum to {total:.3f}, not 1.0. "
+                    f"Overlays merge allocation key by key, so spell out EVERY asset "
+                    f"(including cash: 0.0) when changing an allocation.")
         if self.rule_of_55:
             if self.type not in ("traditional", "roth"):
                 raise ValueError(f"account {self.id!r}: rule_of_55 only applies to "
@@ -97,6 +123,10 @@ class IncomeCfg(StrictModel):
     taxable: bool = True
     fica: bool = True
     phantom: bool = False   # taxable but produces NO cash (undistributed K-1 share)
+    # Fraction of this stream that the state adds back as income taxes deducted at
+    # the entity level (MI Sch 1 line 2; e.g. an S-corp's flow-through-entity tax).
+    # Set from the filed return: addback / K-1 income. 0 = none.
+    state_tax_addback: float = 0.0
 
 
 class ExpenseCfg(StrictModel):
@@ -270,6 +300,19 @@ class AcaCfg(StrictModel):
     household_size_schedule: list[AcaSizeStepCfg] = []
 
 
+class IrmaaCfg(StrictModel):
+    # Medicare Part B/D income-related surcharge. On by default: it needs no stream,
+    # just people at medicare_age. Surcharge for year Y is priced off MAGI from year
+    # Y - lookback_years (SSA uses the latest return the IRS has, normally two back).
+    enabled: bool = True
+    medicare_age: int = 65
+    lookback_years: int = 2
+    # MAGI (AGI + tax-exempt interest, nominal) for pre-simulation years, keyed by
+    # year, so the first lookback_years of a run can be priced; missing years fall
+    # back to that year's own MAGI. Only matters when someone is already on Medicare.
+    prior_magi: dict[int, float] = {}
+
+
 class TaxCfg(StrictModel):
     regime: Literal["flat_stub", "us_federal"] = "us_federal"
     state: Literal["none", "michigan"] = "none"
@@ -280,6 +323,7 @@ class TaxCfg(StrictModel):
     # line 13 when the wage limit binds. None disables QBI.
     qbi_wage_cap: float | None = None
     aca: AcaCfg = AcaCfg()
+    irmaa: IrmaaCfg = IrmaaCfg()
 
 
 class ScenarioConfig(StrictModel):

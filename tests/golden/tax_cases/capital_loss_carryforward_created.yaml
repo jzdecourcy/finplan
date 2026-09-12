@@ -1,0 +1,24 @@
+name: capital-loss-carryforward-created
+source: >-
+  Schedule D (2025) line 21 / Capital Loss Carryover Worksheet: net capital loss
+  -16,270 (LTCG 2,291 less an 18,561 carryover). Deduct 3,000 this year, carry
+  13,270 forward. Form 8960 instructions line 5a: the loss enters NII only to the
+  extent allowed on the 1040, i.e. -3,000. Wages 300,000, interest 12,907,
+  ordinary dividends 6,716, qualified 7,184. AGI = 300,000 + 12,907 + 6,716 +
+  7,184 - 3,000 = 323,807. NII = 12,907 + 6,716 + 7,184 - 3,000 = 23,807;
+  MAGI - 250,000 = 73,807 > NII -> NIIT = 0.038 x 23,807 = 904.67.
+params_year: 2026
+input:
+  filing_status: mfj
+  ages: { p0: 47, p1: 49 }
+  wages: 300000
+  interest: 12907
+  ordinary_dividends: 6716
+  qualified_dividends: 7184
+  realized_ltcg: 2291
+  capital_loss_carryforward: 18561
+expected:
+  agi: 323807
+  capital_loss_carryforward_out: 13270
+  niit: 904.67
+tolerance: 1.0

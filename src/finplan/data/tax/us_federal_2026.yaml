@@ -97,6 +97,21 @@ aca:                          # Premium Tax Credit, IRC § 36B — coverage year
     - { fpl_from: 3.00, fpl_to: 4.00, pct_from: 0.0996, pct_to: 0.0996 }
   cliff_fpl_ratio: 4.00       # eligible up to and INCLUDING 400% ("does not exceed")
 
+irmaa:                        # Medicare Part B/D income-related adjustment, SSA § 1839(i)
+  # CMS fact sheet 2025-11-14 (standard Part B premium $202.90/mo, not modeled here:
+  # the base premium is ordinary healthcare spending). MAGI = AGI + tax-exempt
+  # interest from the return TWO years back (§ 1839(i)(4)); the simulator supplies
+  # that lag. Tiers 1-4 start ABOVE each threshold; the top tier starts AT its
+  # threshold ("greater than or equal to $500,000 / $750,000"). MFS not modeled.
+  # Thresholds index with CPI-U rounded to $1,000 (§ 1839(i)(5)); the top tier is
+  # statutorily frozen through 2027 — ignored (immaterial). The surcharge amounts
+  # really track Part B cost growth, which has outrun CPI; CPI-indexed here as an
+  # approximation (assumptions.md).
+  tiers_single: [109000, 137000, 171000, 205000, 500000]
+  tiers_mfj:    [218000, 274000, 342000, 410000, 750000]
+  part_b_monthly_adjustment: [81.20, 202.90, 324.60, 446.30, 487.00]
+  part_d_monthly_adjustment: [14.50, 37.50, 60.40, 83.30, 91.00]
+
 sources:
   - "Rev. Proc. 2025-32 (2026 inflation adjustments): https://www.irs.gov/pub/irs-drop/rp-25-32.pdf"
   - "Notice 2025-67 (2026 retirement plan limits): https://www.irs.gov/pub/irs-drop/n-25-67.pdf"
@@ -109,3 +124,6 @@ sources:
   - "2025 HHS Poverty Guidelines (govern 2026 coverage year), 90 FR 5917: https://aspe.hhs.gov/topics/poverty-economic-mobility/poverty-guidelines"
   - "Verified 2026-09-03 by web research against the above (see session notes)"
   - "ACA block verified 2026-09-04 against Rev. Proc. 2025-25 PDF and ASPE guidelines"
+  - "CMS fact sheet, 2026 Medicare Parts A & B Premiums and Deductibles (2025-11-14): https://www.cms.gov/newsroom/fact-sheets/2026-medicare-parts-b-premiums-deductibles"
+  - "42 U.S.C. § 1395r(i) — IRMAA tiers, two-year MAGI lookback, CPI indexing: https://www.law.cornell.edu/uscode/text/42/1395r"
+  - "IRMAA block verified 2026-09-12 against the CMS fact sheet (Part B and Part D tables)"

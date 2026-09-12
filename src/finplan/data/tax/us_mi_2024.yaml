@@ -1,5 +1,5 @@
 # Michigan individual income tax parameters, TAX YEAR 2024. Verified against primary
-# sources 2026-09-11 — see `sources`. Added so filed 2024 returns can be reconciled.
+# sources 2026-09-11 — see `sources`. Added for the 2024 filed-return reconciliation.
 year: 2024
 
 rate: 0.0425                  # MI-1040 (2024) line 17
@@ -22,6 +22,6 @@ mesp_529_deduction:           # Schedule 1 line 17
   mfj: 10000
 
 sources:
-  - "2024 MI-1040 form (rate 4.25%; exemption $5,600)"
+  - "2024 MI-1040 form (rate 4.25%; exemption $5,600), as filed"
   - "Michigan Treasury, 2024 Tier III / Phase-In Subtraction page ('For 2024 those amounts are $32,020 if single or married filing separately, $64,040 if married filing jointly'; 50% of private pension limits; born 1946-1962): https://www.michigan.gov/taxes/iit/tax-guidance/tax-situations/retirement-and-pension-benefits/2024/2024-tier-iii"
-  - "Verified 2026-09-11: figures read from the michigan.gov page in a browser session "
+  - "Verified 2026-09-11: figures read from the michigan.gov page in a browser session and from the filed 2024 MI-1040"

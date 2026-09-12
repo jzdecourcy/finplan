@@ -1,0 +1,20 @@
+name: irmaa-mfj-at-first-threshold
+source: >-
+  CMS fact sheet 2025-11-14: joint MAGI "less than or equal to 218,000" pays the
+  standard premium. Lagged MAGI exactly 218,000 with two enrollees -> tier 0, no
+  surcharge; total equals federal + state-free tax on 100,000 of traditional
+  distributions alone. Federal: taxable 100,000 - 32,200 - 2 x 1,650 (age 65+)
+  = 64,500 -> 2,480 + 12% x 39,700 = 7,244. Senior bonus (6,000 each, no
+  phaseout at this MAGI) reduces taxable by 12,000 -> 52,500 -> 5,804.
+params_year: 2026
+input:
+  filing_status: mfj
+  ages: { p0: 67, p1: 66 }
+  traditional_distributions: 100000
+  medicare_enrollees: 2
+  irmaa_magi: 218000
+expected:
+  irmaa_tier: 0
+  irmaa: 0
+  total: 5804
+tolerance: 1.0

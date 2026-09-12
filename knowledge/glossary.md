@@ -281,4 +281,17 @@ uses something not listed.
 - **Flow-through entity (FTE) tax** — some states (e.g. Michigan) let an S-corp or
   partnership elect to pay state income tax at the entity level, deductible federally,
   which lowers the K-1. The state then adds the owner's share back on the state return
-  and usually gives a matching credit. Not modeled by the engine.
+  and usually gives a matching credit. The engine models the addback via an income
+  stream's `state_tax_addback` fraction; the credit is not modeled.
+- **Capital loss carryforward** — when realized capital losses exceed gains in a year,
+  only $3,000 of the excess reduces ordinary income; the rest carries to later years
+  and nets against future gains first. The engine tracks it per simulated path (ledger
+  column `capital_loss_carryforward`).
+- **IRMAA (income-related monthly adjustment amount)** — the Medicare surcharge higher-
+  income people pay on top of the standard Part B and Part D premiums. Social Security
+  sets it from the tax return filed two years earlier (MAGI = AGI plus tax-exempt
+  interest), in five tiers; for a couple the first tier starts above $218,000 (2026).
+  It is a cliff, not a slope: one dollar over a threshold costs the whole tier for the
+  year. The engine prices it per person 65+ (ledger columns `tax_irmaa`, `irmaa_tier`).
+  Large Roth conversions or RMDs in one year raise IRMAA two years later, which is why
+  conversions are cheapest before age 63.

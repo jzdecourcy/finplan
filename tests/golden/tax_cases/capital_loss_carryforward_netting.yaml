@@ -1,0 +1,26 @@
+name: capital-loss-carryforward-netting
+source: >-
+  Schedule D (2025) lines 16 and 21 and the Capital Loss Carryover Worksheet
+  (Schedule D instructions): a prior-year carryover nets against current gains;
+  a net loss is deductible up to $3,000 (MFJ) and the rest carries to next year.
+  Wages 200,000; LTCG 9,867 + STCG 1,628 - carryover 13,270 = -1,775 net loss,
+  fully deducted (< 3,000), nothing carried. AGI = 200,000 - 1,775 = 198,225.
+  Taxable = 198,225 - 32,200 = 166,025. Tax (2026 MFJ): 11,157 + 22% x
+  (166,025 - 100,800)? -> use brackets: 2,480 + 9,120 + 0.22 x (166,025-100,800)
+  = 11,600 + 14,349.50 = 25,949.50. NIIT: no investment income besides the
+  gains (net loss enters as -1,775), MAGI < 250,000 -> 0.
+params_year: 2026
+input:
+  filing_status: mfj
+  ages: { p0: 48, p1: 50 }
+  wages: 200000
+  realized_ltcg: 9867
+  realized_stcg: 1628
+  capital_loss_carryforward: 13270
+expected:
+  agi: 198225
+  taxable_income: 166025
+  federal: 25949.50
+  capital_loss_carryforward_out: 0
+  niit: 0
+tolerance: 1.0

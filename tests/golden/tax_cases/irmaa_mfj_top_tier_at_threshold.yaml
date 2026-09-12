@@ -1,0 +1,18 @@
+name: irmaa-mfj-top-tier-at-threshold
+source: >-
+  CMS fact sheet 2025-11-14: the top joint tier reads "greater than or equal to
+  750,000" while the lower tiers read "greater than". Two enrollees with lagged
+  MAGI exactly 750,000 land in tier 5: (487.00 + 91.00) x 12 x 2 = 13,872.00.
+  (Companion case irmaa_mfj_at_first_threshold checks that exactly 218,000 stays
+  in tier 0.)
+params_year: 2026
+input:
+  filing_status: mfj
+  ages: { p0: 70, p1: 68 }
+  traditional_distributions: 100000
+  medicare_enrollees: 2
+  irmaa_magi: 750000
+expected:
+  irmaa_tier: 5
+  irmaa: 13872.00
+tolerance: 0.01

@@ -221,14 +221,19 @@ def sweep(files, spec_path, mode, seed, n_paths, workers, out_dir) -> None:
 @click.option("--income", "income_parts", multiple=True,
               help="component=amount, e.g. wages=180000 ltcg=20000 ss=40000 trad=30000 "
                    "conversion=25000 interest=1000 usgov=2000 qdiv=5000 mi529=10000 "
-                   "aca_premium=24000 aca_hh=2 business=250000")
+                   "aca_premium=24000 aca_hh=2 business=250000 loss_cf=13270 "
+                   "reit=30 foreign_tax=66 state_addback=15887 other=553 "
+                   "medicare=2 irmaa_magi=250000")
+@click.option("--dependents", type=int, default=0,
+              help="claimable dependents (MI exemptions; ACA size still via aca_hh)")
 @click.option("--wages", "wages_parts", multiple=True,
               help="per-earner W-2 wages for FICA, name=amount (repeat); "
                    "replaces --income wages=")
 @click.option("--qbi-wage-cap", type=float, default=None,
               help="s199A wage cap = 50%% of allocable W-2 wages (Statement A); "
                    "omit = no QBI deduction")
-def tax_year(year, filing, state, ages, income_parts, wages_parts, qbi_wage_cap) -> None:
+def tax_year(year, filing, state, ages, income_parts, wages_parts, qbi_wage_cap,
+             dependents) -> None:
     """One-off tax calculation (debugging / trust-building)."""
     from finplan.model.household import FilingStatus
     from finplan.taxes.engine import compute_year_tax, marginal_rate
@@ -242,7 +247,11 @@ def tax_year(year, filing, state, ages, income_parts, wages_parts, qbi_wage_cap)
         "trad": "traditional_distributions", "conversion": "roth_conversions",
         "ss": "ss_benefits", "penalty": "penalty_base", "mi529": "mi_529_contributions",
         "muni": "tax_exempt_interest", "usgov": "us_gov_interest",
+        "loss_cf": "capital_loss_carryforward", "reit": "sec199a_dividends",
+        "other": "other_ordinary",
+        "foreign_tax": "foreign_tax_paid", "state_addback": "state_tax_addback",
         "aca_premium": "aca_benchmark_premium", "aca_hh": "aca_household_size",
+        "medicare": "medicare_enrollees", "irmaa_magi": "irmaa_magi",
     }
     kwargs: dict = {}
     for part in income_parts:
@@ -252,6 +261,8 @@ def tax_year(year, filing, state, ages, income_parts, wages_parts, qbi_wage_cap)
         kwargs[field_map[k]] = float(v.replace(",", ""))
     if "aca_household_size" in kwargs:
         kwargs["aca_household_size"] = int(kwargs["aca_household_size"])
+    if "medicare_enrollees" in kwargs:
+        kwargs["medicare_enrollees"] = int(kwargs["medicare_enrollees"])
     age_list = list(ages) or ([45, 45] if filing == "mfj" else [45])
     wages_by_person: dict[str, float] = {}
     for part in wages_parts:
@@ -270,6 +281,7 @@ def tax_year(year, filing, state, ages, income_parts, wages_parts, qbi_wage_cap)
         ages={f"p{i}": a for i, a in enumerate(age_list)},
         wages_by_person=wages_by_person,
         qbi_wage_cap=qbi_wage_cap,
+        dependents=dependents,
         **kwargs,
     )
     try:
@@ -289,6 +301,15 @@ def tax_year(year, filing, state, ages, income_parts, wages_parts, qbi_wage_cap)
         rows[2:2] = [("QBI deduction", r.qbi_deduction)]
     if kwargs.get("aca_benchmark_premium"):
         rows[3:3] = [("ACA MAGI", r.aca_magi), ("ACA premium credit", r.aca_credit)]
+    extras = [("NIIT (in federal)", r.niit)]
+    if r.foreign_tax_credit:
+        extras.append(("foreign tax credit", r.foreign_tax_credit))
+    if r.capital_loss_carryforward_out:
+        extras.append(("loss carryforward out", r.capital_loss_carryforward_out))
+    if kwargs.get("medicare_enrollees"):
+        extras.append((f"Medicare IRMAA (tier {r.irmaa_tier})", r.irmaa))
+    at = rows.index(("FICA", r.fica))
+    rows[at:at] = extras
     for label, v in rows:
         click.echo(f"  {label:>24}: ${v:,.0f}")
     if kwargs.get("aca_benchmark_premium"):

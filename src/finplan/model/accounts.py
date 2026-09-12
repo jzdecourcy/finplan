@@ -71,8 +71,10 @@ class Account:
             res.tax_free = take
         elif t is AccountType.TAXABLE:
             # Average-cost: gain fraction of every dollar withdrawn matches the account's.
+            # An underwater account (basis > balance) realizes a LOSS on every sale;
+            # the tax engine deducts $3k/yr and carries the rest forward.
             basis_fraction = (self.cost_basis / self.balance) if self.balance > 0 else 1.0
-            basis_out = take * min(basis_fraction, 1.0)
+            basis_out = take * basis_fraction
             res.realized_ltcg = take - basis_out
             res.tax_free = basis_out
             self.cost_basis -= basis_out

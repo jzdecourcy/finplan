@@ -1,0 +1,29 @@
+name: qbi-reit-component-and-foreign-tax-credit
+source: >-
+  Form 8995-A (2025) line 31: qualified REIT dividends x 20% is a separate QBI
+  component not subject to the W-2 wage limit; line 33 caps the total at 20% of
+  (taxable income - net capital gain). Foreign tax credit: Form 1116 exception
+  (Pub 514) - creditable foreign tax <= $600 MFJ is a direct credit on Schedule 3.
+  Business 100,000 (wage cap 10,000 binds -> 10,000), REIT dividends 500 (also
+  in ordinary dividends) -> +100; total QBI deduction 10,100. Foreign tax 66.
+  Wages 150,000. AGI = 250,500. Taxable before QBI = 218,300; taxable = 208,200.
+  Tax (2026 MFJ): 2,480 + 9,120 + 0.22 x (208,200 - 100,800) = 11,600 + 23,628 =
+  35,228; less FTC 66 = 35,162. NIIT: NII 500, MAGI 250,500 -> 0.038 x min(500,
+  500) = 19. Federal = 35,181.
+params_year: 2026
+input:
+  filing_status: mfj
+  ages: { p0: 45, p1: 45 }
+  wages: 150000
+  business: 100000
+  qbi_wage_cap: 10000
+  ordinary_dividends: 500
+  sec199a_dividends: 500
+  foreign_tax_paid: 66
+expected:
+  qbi_deduction: 10100
+  taxable_income: 208200
+  foreign_tax_credit: 66
+  niit: 19
+  federal: 35181
+tolerance: 1.0

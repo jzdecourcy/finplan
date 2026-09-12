@@ -39,12 +39,19 @@ class YearLedger:
     taxable_income: float = 0.0
     marginal_rate_ordinary: float = 0.0
     realized_ltcg: float = 0.0
+    capital_loss_carryforward: float = 0.0   # unused capital loss carried INTO next year
+    foreign_tax_credit: float = 0.0
 
     # ACA premium tax credit (all zero when no aca-flagged expense stream is active)
     aca_gross_premium: float = 0.0     # full benchmark premium charged as spending
     aca_magi: float = 0.0
     aca_fpl_pct: float = 0.0           # ratio: 2.25 = 225% of FPL
     aca_credit: float = 0.0
+
+    # Medicare IRMAA (zero until someone reaches medicare_age)
+    magi_irmaa: float = 0.0            # AGI + tax-exempt interest; sets IRMAA two years on
+    tax_irmaa: float = 0.0             # Part B + D surcharge paid this year (in tax_total)
+    irmaa_tier: int = 0
 
     # funding
     withdrawals_total: float = 0.0
@@ -77,6 +84,8 @@ class SimState:
     household: Household
     accounts: list[Account]
     cash_buffer: float = 0.0            # intra-year float; swept at year end
+    capital_loss_carryforward: float = 0.0   # Schedule D carryover, nominal
+    magi_history: dict[int, float] = field(default_factory=dict)   # year -> IRMAA MAGI
     failed: bool = False
     first_failure_year: int | None = None
 

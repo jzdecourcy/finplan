@@ -1,7 +1,7 @@
 # US federal tax parameters, TAX YEAR 2025. Values verified against primary sources
 # 2026-09-11 — see `sources` at bottom. Do not edit without a cited source + green
-# golden tests (tests/golden/). Added so filed 2025 returns can be reconciled with
-# `plan tax-year --year 2025`; structure mirrors us_federal_2026.yaml.
+# golden tests (tests/golden/). Added for the 2025 filed-return reconciliation
+# (knowledge/decisions.md 2026-09-11); structure mirrors us_federal_2026.yaml.
 year: 2025
 
 ordinary_brackets:            # Rev. Proc. 2024-40 § 3.01, Tables 1 and 3

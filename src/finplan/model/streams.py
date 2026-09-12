@@ -34,6 +34,7 @@ class IncomeStream(_Stream):
     taxable: bool = True
     fica: bool = True
     phantom: bool = False   # taxable, no cash (undistributed pass-through share)
+    state_tax_addback: float = 0.0   # fraction added back on the MI return (Sch 1 line 2)
 
     def ctx_for(self, base: RefContext) -> RefContext:
         return RefContext(base.birth_years, base.retirement_years, base.horizon_year, self.owner)

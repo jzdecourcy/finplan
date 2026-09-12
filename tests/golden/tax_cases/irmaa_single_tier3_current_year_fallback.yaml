@@ -1,0 +1,20 @@
+name: irmaa-single-tier3-current-year-fallback
+source: >-
+  CMS fact sheet 2025-11-14: individual MAGI greater than 171,000 and at most
+  205,000 -> Part B 324.60/mo, Part D 60.40/mo. No lagged MAGI supplied, so the
+  engine prices this year's own MAGI: AGI 165,000 (traditional) + 10,000
+  tax-exempt interest = 175,000 (§ 1839(i)(4)(A): MAGI adds back tax-exempt
+  interest) -> tier 3: (324.60 + 60.40) x 12 = 4,620.00. Without the muni
+  addback AGI 165,000 would sit in tier 2 (202.90 + 37.50 = 2,884.80).
+params_year: 2026
+input:
+  filing_status: single
+  ages: { p0: 68 }
+  traditional_distributions: 165000
+  tax_exempt_interest: 10000
+  medicare_enrollees: 1
+expected:
+  magi_irmaa: 175000
+  irmaa_tier: 3
+  irmaa: 4620.00
+tolerance: 0.01

@@ -207,6 +207,11 @@ def _tax_page(pdf: PdfPages, results: SimResults) -> None:
         stacks.append(penalties)
         labels.append("Early-withdrawal penalties")
         colors.append(_SERIES[7])
+    irmaa = _median_by_year(results, "tax_irmaa").reindex(years).fillna(0.0)
+    if irmaa.sum() > 0:
+        stacks.append(irmaa)
+        labels.append("Medicare IRMAA")
+        colors.append(_SERIES[6])
     ax1.stackplot(years, stacks, labels=labels, colors=colors,
                   edgecolor=_SURFACE, linewidth=1)
     ax1.set_title("Annual tax by component", loc="left", fontsize=11, color=_INK2)

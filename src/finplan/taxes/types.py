@@ -37,10 +37,19 @@ class TaxInput:
     qualified_dividends: float = 0.0
     realized_ltcg: float = 0.0
     realized_stcg: float = 0.0
+    capital_loss_carryforward: float = 0.0  # prior years' unused capital loss (positive)
+    sec199a_dividends: float = 0.0  # REIT/PTP dividends (1099-DIV box 5): a SUBSET of
+                                    # ordinary_dividends that also earns the 20% QBI deduction
+    foreign_tax_paid: float = 0.0   # 1099-DIV box 7: creditable against federal tax
 
     # penalties / state hooks
     penalty_base: float = 0.0      # early-withdrawal amounts (10% federal)
     mi_529_contributions: float = 0.0
+    dependents: int = 0            # claimable dependents: MI personal exemptions only
+                                   # (the federal child credit is phased out at the incomes
+                                   # this engine targets; not modeled)
+    state_tax_addback: float = 0.0 # MI Sch 1 line 2: income taxes deducted at the entity
+                                   # level on a K-1, added back on the MI return
     # QBI (s199A): business income is presumed qualified; deduction limited by
     # min(20% x QBI, wage cap, 20% x (taxable income - net cap gain/qdiv)).
     qbi_wage_cap: float | None = None   # None disables the deduction
@@ -48,6 +57,11 @@ class TaxInput:
     # ACA premium tax credit (§ 36B); both must be > 0 to activate
     aca_benchmark_premium: float = 0.0  # nominal benchmark (SLCSP proxy) this year
     aca_household_size: int = 0         # tax-family size for the FPL denominator
+
+    # Medicare IRMAA (§ 1839(i)); active when medicare_enrollees > 0
+    medicare_enrollees: int = 0         # people on Medicare Part B/D this year
+    irmaa_magi: float | None = None     # MAGI from the two-years-back return (nominal);
+                                        # None -> fall back to THIS year's MAGI
 
     @property
     def ordinary_total(self) -> float:
@@ -75,6 +89,12 @@ class TaxResult:
     aca_magi: float = 0.0
     aca_fpl_pct: float = 0.0    # ratio (2.25 = 225% FPL); 0 when ACA inactive
     aca_credit: float = 0.0
+    niit: float = 0.0
+    foreign_tax_credit: float = 0.0
+    capital_loss_carryforward_out: float = 0.0   # unused loss carried to next year
+    magi_irmaa: float = 0.0     # AGI + tax-exempt interest: drives IRMAA two years on
+    irmaa: float = 0.0          # annual Part B + D surcharge, all enrollees (in total)
+    irmaa_tier: int = 0         # 0 = none, 1..5
 
 
 class TaxEngine(Protocol):
