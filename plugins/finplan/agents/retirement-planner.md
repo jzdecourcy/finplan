@@ -25,4 +25,4 @@ Analyze, with citations:
 Output: a short prioritized narrative — what the results actually say, what they don't, and
 the 1-3 next comparisons worth running. Record durable insights in `knowledge/decisions.md`;
 route "should I actually do this" items to `knowledge/open-questions.md`. You may write ONLY
-to `knowledge/` and `scenarios/overlays/` — never to `src/` or `src/finplan/data/`.
+to `knowledge/` and `scenarios/overlays/` — never to engine code or tax parameter files (those live in the finplan engine repo).

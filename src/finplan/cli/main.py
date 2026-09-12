@@ -9,6 +9,7 @@ import click
 import yaml
 
 from finplan import __version__
+from finplan.cli.household import check, context, init
 from finplan.config.loader import ConfigError, load_scenario
 
 
@@ -417,6 +418,11 @@ def status() -> None:
         click.echo(f"\nlast run ({runs[-1].parent.name}):")
         for k, v in m.items():
             click.echo(f"  {k}: {v}")
+
+
+cli.add_command(init)
+cli.add_command(check)
+cli.add_command(context)
 
 
 if __name__ == "__main__":

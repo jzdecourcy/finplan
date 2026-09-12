@@ -1,101 +1,55 @@
-# finplan — operator's manual for Claude sessions
+# finplan — engine and plugin repo (developer notes for Claude sessions)
 
-This repo is a personal financial planning environment. **Claude is the primary interface**:
-the user never edits YAML by hand. They talk in plain English, paste numbers, or drop
-brokerage CSV exports into `inbox/`. Claude translates that into config/snapshot files,
-runs the engine, and explains results.
+This repo is the **framework**: the `plan` engine (`src/finplan`), its tests, and the
+Claude Code plugin (`plugins/finplan`) served from the marketplace manifest at
+`.claude-plugin/marketplace.json`. It contains no household data and never will. A
+household's plan lives in a separate directory created by `plan init`; the operator
+manual for working there is `plugins/finplan/manual.md`, not this file.
 
-## Ground rules
+## Rules
 
-1. **Agents advise, code computes.** All dollar figures come from the engine (`plan run`,
-   `plan tax-year`), never from model arithmetic. Never hand-estimate a tax or projection result.
-2. **Privacy**: `snapshots/`, `inbox/`, and `runs/` are gitignored and must stay that way.
-   Never commit real balances. Never write SSNs, full account numbers, or institution logins
-   anywhere — strip account numbers to a last-4 label (e.g. `fidelity-4321`). The user's
-   instance of this repo must be private: `scenarios/` and `knowledge/` are version-controlled
-   on purpose and accumulate personal detail (names, salaries — never balances).
-3. **Every config edit is reviewed as English + a diff**: after editing scenario files, run
-   `plan validate` and show the user what changed and why (`plan show-config --diff-base`).
-4. **Tax parameter files** (`src/finplan/data/tax/`) change only with a cited primary source
-   (`sources:` block) and passing golden tests. Never edit them from memory.
-5. **Write-back discipline**: after any session that sets an assumption, makes a decision, or
-   learns a durable household fact, append it to the matching file in `knowledge/` with a date.
-   Consequential moves (large Roth conversions, sales) go on `knowledge/open-questions.md` for
-   a human CPA — the model does not give tax advice.
+1. **No personal data.** No real names, balances, incomes, account labels, or run output.
+   Examples are fictional (`src/finplan/data/examples/`, household templates in
+   `src/finplan/data/household/`). If a fix needs a real household's config to reproduce,
+   rebuild the case as a fixture with fictional numbers.
+2. **Tax parameter files** (`src/finplan/data/tax/`) change only with a cited primary
+   source in their `sources:` block and passing golden tests (`tests/golden/`). Never edit
+   them from memory.
+3. **Engine results are golden-tested.** `tests/golden/sim_snapshots` pins a full lifetime
+   run; re-bless with `pytest --update-golden` only when a change is meant to move numbers,
+   and say what moved and why in the commit.
+4. **Every household-facing convention lives in one place.** Mechanical rules go into
+   `plan check` (naming, validation, privacy scan); behavioural rules go into
+   `plugins/finplan/manual.md`. Don't restate either in skills or agents.
+5. **Version bumps** touch `pyproject.toml`, `src/finplan/__init__.py`,
+   `plugins/finplan/.claude-plugin/plugin.json`, and `.claude-plugin/marketplace.json`
+   together.
 
-## File conventions
+## Layout
 
-- `scenarios/base.yaml` — the user's base plan (structure: household, accounts, income,
-  expenses, policies, market). Account *balances* live in snapshots, not here.
-- `scenarios/examples/` — fictional sample configs, safe to commit; a starting template.
-- `scenarios/overlays/*.yaml` — partial configs merged over base (`-f base -f overlay`).
-  List items merge by `id`; `remove: true` deletes an item; scalars replace.
-  **Naming**: stem = `<family>_<value>` snake_case (`retire_57`, `roth_ladder_22`,
-  `move_2030_mortgage`, `ss_70`, `spend_plus30`); `meta.name` equals the stem;
-  `meta.description` is a required one-liner (quote it if it contains a colon). The
-  first comment lines stay for the long story. `tests/unit/test_overlay_naming.py`
-  enforces this. Typical families: retire, ss, horizon, spend, earn, roth_ladder,
-  withdraw, guardrail, contrib, cash, move, aca, scorp, college, gift.
-- `scenarios/sweeps/*.yaml` — sweep specs for `plan sweep`: `levers` (choices the
-  household controls, crossed) and `stress` (assumptions it doesn't, each cell re-run
-  under every one; first entry = reference). Classify a new overlay family as lever or
-  stress before adding it. `--mode det` is a seconds-long smoke pass; MC on a ~150-cell
-  grid takes ~15 min on a desktop. Read the per-lever lookup and within-lever frontier,
-  not the global frontier (the global one is always captured by "retire later").
-- `snapshots/YYYY-MM-DD.yaml` — dated per-account `{balance, cost_basis}` values.
-  `accounts_from: snapshots/latest` in base.yaml resolves to the newest file.
-- `inbox/` — user drops CSV position exports here; parse into a snapshot, confirm with the
-  user, then move the file to `inbox/processed/`, **renaming it on the way**:
-  `YYYY-MM-DD_institution-last4-owner_doctype[-period].ext` (lowercase; date = pull date;
-  doctype ∈ positions / holdings / balance / activity / annual-summary / benefit-estimate;
-  add a period suffix like `activity-2025` when the file covers a span other than the pull
-  date). Example: `2026-09-03_fidelity-4321-sam-roth_positions.csv`. Multi-account exports use `<institution>-all-accounts`; joint or owner-less accounts use `-joint` in place of the owner. Renaming also strips
-  any full account numbers from raw export filenames (privacy rule #2).
-- `knowledge/` — assumptions.md, decisions.md, facts.md, open-questions.md (see write-back rule).
-- `knowledge/glossary.md` — plain-English definitions of report/plan terms. Keep it
-  current: when a report or conversation introduces a term the user might not know,
-  add it there (short entries, no balances) rather than re-explaining each session.
-- `knowledge/data-sources.md` — per-institution playbook for pulling balances (export
-  paths, gotchas, account rosters). Read it BEFORE asking the user how to get data;
-  update it when an institution's process changes.
+```
+src/finplan/            engine: config loader, simulation, taxes, policies, reports, CLI
+src/finplan/data/       tax parameters, market/SS data, example plans, household templates
+tests/                  unit + golden tests (self-contained, no household directory needed)
+plugins/finplan/        the Claude Code plugin: skills/, agents/, hooks/, manual.md
+.claude-plugin/         marketplace manifest listing plugins/finplan
+```
 
 ## Commands
 
 ```
-python -m pip install -e .[dev]     # first-time setup
-pytest                              # run tests (golden tax cases are the correctness backstop)
-plan validate -f scenarios/base.yaml [-f overlay ...]
-plan run -f scenarios/base.yaml [--mode det|mc|hist] [--seed N] [--workers N] [-o runs/name]
-                                    # MC splits paths across cpus-2 processes (cap 16) by default
-plan compare -f base.yaml --scenario "name:-f overlay.yaml" ...
-plan sweep -f base.yaml --spec scenarios/sweeps/<grid>.yaml [--mode det] [-o runs/name]
-                                    # cross decision levers x stress conditions; frontier report
-plan update [account=balance ...]   # write today's snapshot
-plan status                         # net worth, data age, last run headline
-plan tax-year --year 2026 --filing mfj --income wages=180000 ...
+python -m pip install -e .[dev]
+pytest
+plan init <scratch-dir>                      # exercise the household flow end to end
+claude plugin marketplace add C:/path/to/finplan   # once, local dev marketplace
+claude plugin install finplan@finplan
+claude plugin marketplace update finplan && claude plugin update finplan@finplan   # after plugin edits
+claude plugin details finplan@finplan        # component inventory and token cost
 ```
 
-## Step 0 onboarding (first session, or re-onboarding after a life change)
+## Hooks
 
-Run the `/interview` skill (`.claude/skills/interview/SKILL.md`) — the full phased
-interview script, generic for any household, resumable via
-`knowledge/onboarding-status.md`. The script is the single source of truth for
-onboarding; don't restate its checklist here.
-
-## Monthly update checklist
-
-1. Parse whatever the user provides (inbox CSVs, pasted numbers, or run `plan update`).
-2. Write `snapshots/<today>.yaml`; confirm the deltas with the user.
-3. `plan status` and report anything notable vs. the plan.
-
-## Known engine limits
-
-Federal + Michigan state tax only (other states: set `state: none`, warn the user, and
-log it in assumptions — adding a state is a code project: module under
-`src/finplan/taxes/`, cited parameter file under `src/finplan/data/tax/`, golden tests).
-Standard deduction only; no AMT; average-cost basis; no loss carryforwards; annual steps.
-Cash accounts grow at the modeled cash return, not their APY. Only one federal
-parameter year ships (2026), so prior-year returns reconcile approximately.
-Michigan's 529 deduction is netted against same-year qualified draws per account
-(Schedule 1 line 17), but the line 8 add-back of non-qualified withdrawals and the
-529-to-Roth rollover are not modeled; 529s are drawn only for education-tagged spending.
+`hooks/hooks.json` wires `session_start.py` (prints `manual.md` + `plan context` in a
+household directory, nothing elsewhere) and `post_edit.py` (runs `plan validate` after a
+Write/Edit to base, an overlay, or a snapshot; exit 2 with the validator's message on
+failure). Test them by piping a fake event: `echo '{"cwd":"<dir>"}' | python hooks/session_start.py`.

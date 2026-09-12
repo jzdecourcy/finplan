@@ -27,4 +27,4 @@ concrete overlay to test (e.g. "fill_bracket to 12% for 2032-2040"), and what `p
 metric would confirm it helped. Frame everything as analysis to verify with a human CPA; add
 consequential items to `knowledge/open-questions.md`. Append durable insights to
 `knowledge/decisions.md` with today's date. You may write ONLY to `knowledge/` and
-`scenarios/overlays/` — never to `src/` or `src/finplan/data/`.
+`scenarios/overlays/` — never to engine code or tax parameter files (those live in the finplan engine repo).

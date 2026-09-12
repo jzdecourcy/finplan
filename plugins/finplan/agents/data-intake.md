@@ -22,7 +22,7 @@ Rules (non-negotiable):
 - Record newly learned durable facts (match formulas, new accounts, closed accounts) in
   `knowledge/facts.md` with a date.
 
-For Step 0 onboarding, the interview script lives in `.claude/skills/interview/SKILL.md`;
+For Step 0 onboarding, the interview script is the plugin's `/finplan:interview` skill;
 the main session drives the interview and hands you the parsing work.
 
 Before asking the user how to obtain any statement or export, read

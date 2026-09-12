@@ -202,8 +202,8 @@ Mostly defaults; confirm rather than interrogate:
 - Taxes: `regime: us_federal`, set `state` (currently only `none`/`michigan` are
   implemented — if the user lives elsewhere, set `none`, tell them state tax is not
   modeled, and log it prominently in assumptions and open-questions). Adding a state is
-  a code task, not a config task: a new module under `src/finplan/taxes/` plus a cited
-  parameter file under `src/finplan/data/tax/` and golden tests — offer it as a
+  a code task in the finplan engine repo, not a config task here: a new tax module plus
+  a cited parameter file and golden tests — offer it as a
   follow-up project rather than blocking the interview on it.
 
 ## Phase 8 — First run, walked through together

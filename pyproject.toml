@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "finplan"
-version = "0.1.0"
+version = "0.2.0"
 description = "Personal financial planning and scenario-modeling environment"
 requires-python = ">=3.12"
 dependencies = [
@@ -27,7 +27,7 @@ plan = "finplan.cli.main:cli"
 where = ["src"]
 
 [tool.setuptools.package-data]
-finplan = ["data/**/*.yaml", "data/**/*.csv"]
+finplan = ["data/**/*.yaml", "data/**/*.csv", "data/**/*.md", "data/household/gitignore"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

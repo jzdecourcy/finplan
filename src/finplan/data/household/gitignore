@@ -1,0 +1,17 @@
+# Personal financial data never leaves this machine.
+snapshots/
+inbox/
+runs/
+reports/
+
+# If this household directory is a git repo it must be PRIVATE: scenarios/ and knowledge/
+# are version-controlled on purpose and accumulate personal detail (names, incomes, totals).
+# Per-account balances stay in snapshots/ only. Never commit SSNs or account numbers;
+# `plan check` scans for them.
+
+# Python / editor
+__pycache__/
+*.pyc
+.venv/
+.DS_Store
+Thumbs.db

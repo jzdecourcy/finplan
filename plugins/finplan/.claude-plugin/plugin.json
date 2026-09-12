@@ -1,0 +1,9 @@
+{
+  "name": "finplan",
+  "description": "Conversational personal financial planning: onboarding interview, data intake, tax and retirement specialists, and guardrail hooks for a finplan household directory.",
+  "version": "0.2.0",
+  "author": { "name": "Justin DeCourcy" },
+  "repository": "https://github.com/jzdecourcy/finplan",
+  "license": "MIT",
+  "keywords": ["finance", "retirement", "tax", "monte-carlo", "planning"]
+}
