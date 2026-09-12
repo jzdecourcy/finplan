@@ -80,8 +80,10 @@ def show_config(files: tuple[str, ...], diff_base: bool) -> None:
 @click.option("--paths", "n_paths", type=int, default=None, help="Monte Carlo path count")
 @click.option("-o", "--out", "out_dir", type=click.Path(), default=None,
               help="write ledger.csv, metrics.json, charts to this directory")
+@click.option("--workers", type=int, default=None,
+              help="processes to split MC paths across (default: auto, cpus-2)")
 @click.option("--every", type=int, default=1, help="print every Nth year only")
-def run(files, mode, seed, n_paths, out_dir, every) -> None:
+def run(files, mode, seed, n_paths, out_dir, workers, every) -> None:
     """Run a scenario and print the annual ledger (det) or summary metrics (mc/hist)."""
     from finplan.api import run_scenario
     from finplan.report.tables import annual_summary
@@ -91,7 +93,7 @@ def run(files, mode, seed, n_paths, out_dir, every) -> None:
         out_dir = f"runs/{stamp}-{mode}"
     try:
         results = run_scenario(_config_files(files), mode=mode, seed=seed,
-                               n_paths=n_paths, out_dir=out_dir)
+                               n_paths=n_paths, out_dir=out_dir, workers=workers)
     except ConfigError as e:
         raise click.ClickException(str(e)) from None
     _print_staleness()
@@ -112,8 +114,10 @@ def run(files, mode, seed, n_paths, out_dir, every) -> None:
 @click.option("--mode", type=click.Choice(["det", "mc", "hist"]), default="det")
 @click.option("--seed", type=int, default=None)
 @click.option("--paths", "n_paths", type=int, default=None)
+@click.option("--workers", type=int, default=None,
+              help="processes to split MC paths across (default: auto, cpus-2)")
 @click.option("-o", "--out", "out_dir", type=click.Path(), default=None)
-def compare(files, scenarios, mode, seed, n_paths, out_dir) -> None:
+def compare(files, scenarios, mode, seed, n_paths, workers, out_dir) -> None:
     """Run several scenario stacks and produce a side-by-side comparison report."""
     import shlex
 
@@ -137,7 +141,8 @@ def compare(files, scenarios, mode, seed, n_paths, out_dir) -> None:
     notes = {}
     for name, stack in stacks:
         try:
-            results = run_scenario(stack, mode=mode, seed=seed, n_paths=n_paths)
+            results = run_scenario(stack, mode=mode, seed=seed, n_paths=n_paths,
+                                   workers=workers)
         except ConfigError as e:
             raise click.ClickException(f"scenario {name!r}: {e}") from None
         runs.append(NamedResults(name=name, results=results))
@@ -215,7 +220,7 @@ def sweep(files, spec_path, mode, seed, n_paths, workers, out_dir) -> None:
 @click.option("--age", "ages", multiple=True, type=int, help="repeat per person")
 @click.option("--income", "income_parts", multiple=True,
               help="component=amount, e.g. wages=180000 ltcg=20000 ss=40000 trad=30000 "
-                   "conversion=25000 interest=1000 qdiv=5000 mi529=10000 "
+                   "conversion=25000 interest=1000 usgov=2000 qdiv=5000 mi529=10000 "
                    "aca_premium=24000 aca_hh=2 business=250000")
 @click.option("--wages", "wages_parts", multiple=True,
               help="per-earner W-2 wages for FICA, name=amount (repeat); "
@@ -236,7 +241,7 @@ def tax_year(year, filing, state, ages, income_parts, wages_parts, qbi_wage_cap)
         "ltcg": "realized_ltcg", "stcg": "realized_stcg",
         "trad": "traditional_distributions", "conversion": "roth_conversions",
         "ss": "ss_benefits", "penalty": "penalty_base", "mi529": "mi_529_contributions",
-        "muni": "tax_exempt_interest",
+        "muni": "tax_exempt_interest", "usgov": "us_gov_interest",
         "aca_premium": "aca_benchmark_premium", "aca_hh": "aca_household_size",
     }
     kwargs: dict = {}

@@ -16,9 +16,12 @@ def run_scenario(
     seed: int | None = None,
     n_paths: int | None = None,
     out_dir: str | Path | None = None,
+    workers: int | None = None,
 ) -> SimResults:
+    """workers: processes to split MC paths across (None = auto: cpus-2 for MC runs
+    of >=200 paths when not already inside a worker process, else 1)."""
     cfg, resolved, snap_path = load_scenario(config_paths)
-    results = _run(cfg, mode=mode, seed=seed, n_paths=n_paths)
+    results = _run(cfg, mode=mode, seed=seed, n_paths=n_paths, workers=workers)
     if out_dir is not None:
         out = Path(out_dir)
         out.mkdir(parents=True, exist_ok=True)

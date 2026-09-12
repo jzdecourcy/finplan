@@ -65,7 +65,8 @@ runs the engine, and explains results.
 python -m pip install -e .[dev]     # first-time setup
 pytest                              # run tests (golden tax cases are the correctness backstop)
 plan validate -f scenarios/base.yaml [-f overlay ...]
-plan run -f scenarios/base.yaml [--mode det|mc|hist] [--seed N] [-o runs/name]
+plan run -f scenarios/base.yaml [--mode det|mc|hist] [--seed N] [--workers N] [-o runs/name]
+                                    # MC splits paths across cpus-2 processes (cap 16) by default
 plan compare -f base.yaml --scenario "name:-f overlay.yaml" ...
 plan sweep -f base.yaml --spec scenarios/sweeps/<grid>.yaml [--mode det] [-o runs/name]
                                     # cross decision levers x stress conditions; frontier report

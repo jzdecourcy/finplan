@@ -1,0 +1,103 @@
+# US federal tax parameters, TAX YEAR 2025. Values verified against primary sources
+# 2026-09-11 — see `sources` at bottom. Do not edit without a cited source + green
+# golden tests (tests/golden/). Added so filed 2025 returns can be reconciled with
+# `plan tax-year --year 2025`; structure mirrors us_federal_2026.yaml.
+year: 2025
+
+ordinary_brackets:            # Rev. Proc. 2024-40 § 3.01, Tables 1 and 3
+  single:
+    - { upto: 11925, rate: 0.10 }
+    - { upto: 48475, rate: 0.12 }
+    - { upto: 103350, rate: 0.22 }
+    - { upto: 197300, rate: 0.24 }
+    - { upto: 250525, rate: 0.32 }
+    - { upto: 626350, rate: 0.35 }
+    - { upto: null, rate: 0.37 }
+  mfj:
+    - { upto: 23850, rate: 0.10 }
+    - { upto: 96950, rate: 0.12 }
+    - { upto: 206700, rate: 0.22 }
+    - { upto: 394600, rate: 0.24 }
+    - { upto: 501050, rate: 0.32 }
+    - { upto: 751600, rate: 0.35 }
+    - { upto: null, rate: 0.37 }
+
+ltcg_brackets:                # Rev. Proc. 2024-40 § 3.03 (0% / 15% / 20% breakpoints)
+  single:
+    - { upto: 48350, rate: 0.00 }
+    - { upto: 533400, rate: 0.15 }
+    - { upto: null, rate: 0.20 }
+  mfj:
+    - { upto: 96700, rate: 0.00 }
+    - { upto: 600050, rate: 0.15 }
+    - { upto: null, rate: 0.20 }
+
+standard_deduction:           # OBBBA (P.L. 119-21) § 70102 raised 2025 to $15,750 / $31,500,
+  single: 15750               # superseding Rev. Proc. 2024-40 § 3.15 ($15,000 / $30,000);
+  mfj: 31500                  # figures as printed in the 2025 Form 1040 instructions.
+  extra_65_single: 2000       # Rev. Proc. 2024-40 § 3.15(3): $1,600; $2,000 if unmarried
+  extra_65_mfj: 1600
+  senior_bonus:               # OBBBA IRC § 151(d)(5): $6,000/person 65+, 2025-2028 only
+    amount: 6000
+    phaseout_rate: 0.06
+    magi_threshold_single: 75000
+    magi_threshold_mfj: 150000
+    expires_after: 2028
+
+niit:                         # § 1411; statutory, unindexed
+  rate: 0.038
+  threshold_single: 200000
+  threshold_mfj: 250000
+
+fica:                         # IRS Pub 15 (2025): wage base $176,100; rates unchanged
+  ss_rate: 0.062
+  ss_wage_base: 176100
+  medicare_rate: 0.0145
+  addl_medicare:              # statutory, unindexed
+    rate: 0.009
+    threshold_single: 200000
+    threshold_mfj: 250000
+
+ss_taxation:                  # Pub 915 Worksheet 1; statutory, unindexed
+  thresholds_single: [25000, 34000]
+  thresholds_mfj: [32000, 44000]
+
+limits:                       # Notice 2024-80; HSA: Rev. Proc. 2024-25
+  elective_401k: 23500
+  catchup_401k_50: 7500
+  ira: 7000
+  ira_catchup_50: 1000
+  hsa_self: 4300
+  hsa_family: 8550
+  hsa_catchup_55: 1000        # statutory, never indexed
+
+penalties:
+  early_withdrawal_rate: 0.10 # § 72(t)
+
+aca:                          # Premium Tax Credit, IRC § 36B — coverage year 2025
+  # FPL: 2024 HHS guidelines (89 FR 2961) govern the 2025 coverage year. 48 states.
+  fpl:
+    first_person: 15060
+    additional_person: 5380
+  # Applicable percentage table TY2025, Rev. Proc. 2024-35 § 3.01. ARPA/IRA enhanced
+  # schedule still in force for 2025: 0% below 150% FPL, 8.5% cap, and NO 400% cliff
+  # (cliff_fpl_ratio set effectively infinite; the engine returns the last band's
+  # top percentage above 400%).
+  applicable_pct:
+    - { fpl_from: 0.00, fpl_to: 1.50, pct_from: 0.0000, pct_to: 0.0000 }
+    - { fpl_from: 1.50, fpl_to: 2.00, pct_from: 0.0000, pct_to: 0.0200 }
+    - { fpl_from: 2.00, fpl_to: 2.50, pct_from: 0.0200, pct_to: 0.0400 }
+    - { fpl_from: 2.50, fpl_to: 3.00, pct_from: 0.0400, pct_to: 0.0600 }
+    - { fpl_from: 3.00, fpl_to: 4.00, pct_from: 0.0600, pct_to: 0.0850 }
+  cliff_fpl_ratio: 1000000.0  # no cliff in TY2025 (Rev. Proc. 2024-35: "400% and higher 8.50%")
+
+sources:
+  - "Rev. Proc. 2024-40 (2025 inflation adjustments; brackets, LTCG, aged deduction, 199A threshold): https://www.irs.gov/pub/irs-drop/rp-24-40.pdf"
+  - "2025 Form 1040 instructions, 'Standard deduction amount increased' ($15,750 / $31,500 / +$1,600 or $2,000 aged): https://www.irs.gov/pub/irs-pdf/i1040gi.pdf"
+  - "Notice 2024-80 (2025 retirement plan limits: 402(g) $23,500; catch-up $7,500; IRA $7,000 / $1,000): https://www.irs.gov/pub/irs-drop/n-24-80.pdf"
+  - "Rev. Proc. 2024-25 (2025 HSA limits $4,300 / $8,550): https://www.irs.gov/pub/irs-drop/rp-24-25.pdf"
+  - "IRS Pub 15 (2025) — SS wage base $176,100, rates: https://www.irs.gov/pub/irs-prior/p15--2025.pdf"
+  - "Rev. Proc. 2024-35 § 3.01 (TY2025 ACA applicable percentage table): https://www.irs.gov/pub/irs-drop/rp-24-35.pdf"
+  - "2024 HHS Poverty Guidelines ($15,060 + $5,380/person; govern 2025 coverage): https://aspe.hhs.gov/topics/poverty-economic-mobility/poverty-guidelines/prior-hhs-poverty-guidelines-federal-register-references"
+  - "IRS OBBBA senior deduction page ($6,000 age 65+): https://www.irs.gov/newsroom/one-big-beautiful-bill-act-tax-deductions-for-working-americans-and-seniors"
+  - "Verified 2026-09-11 by fetching each document above and reading the figures from its text"

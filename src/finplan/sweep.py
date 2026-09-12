@@ -138,7 +138,9 @@ def _run_job(job: dict) -> dict:
     from finplan.api import run_scenario
 
     t0 = time.time()
-    res = run_scenario(job["files"], mode=job["mode"], seed=job["seed"], n_paths=job["paths"])
+    # Cells already fan out across the pool; don't nest a second pool per cell.
+    res = run_scenario(job["files"], mode=job["mode"], seed=job["seed"], n_paths=job["paths"],
+                       workers=1)
     m = res.metrics()
     return {
         "cell": job["cell"],

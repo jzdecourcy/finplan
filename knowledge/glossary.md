@@ -267,3 +267,18 @@ uses something not listed.
   market value when ownership transfers, ending the inflation cap accumulated since
   purchase. Transfers of residential property to close relatives are exempt if the use
   stays residential.
+- **Initial withdrawal rate** — first-year retirement spending plus taxes, minus
+  Social Security and other income, divided by the portfolio at retirement. The
+  classic sanity check: the "4% rule" (Bengen 1994, Trinity study 1998) found ~4%
+  survived ~95% of 30-year historical periods, and ~3.5% survived nearly all periods
+  of 40+ years. A Monte Carlo that assumes lower-than-historical returns will read a
+  few points below those figures on purpose.
+- **Tax reconciliation** — feeding a filed return's income lines into `plan tax-year`
+  for that year and comparing the engine's AGI, taxable income, tax, and state tax
+  against the return line by line. Validates the tax code in the engine against
+  reality; every difference must have a named cause. Needs a parameter file for that
+  tax year (`src/finplan/data/tax/us_federal_<year>.yaml`).
+- **Flow-through entity (FTE) tax** — some states (e.g. Michigan) let an S-corp or
+  partnership elect to pay state income tax at the entity level, deductible federally,
+  which lowers the K-1. The state then adds the owner's share back on the state return
+  and usually gives a matching credit. Not modeled by the engine.

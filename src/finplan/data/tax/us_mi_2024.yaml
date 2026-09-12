@@ -1,0 +1,27 @@
+# Michigan individual income tax parameters, TAX YEAR 2024. Verified against primary
+# sources 2026-09-11 — see `sources`. Added so filed 2024 returns can be reconciled.
+year: 2024
+
+rate: 0.0425                  # MI-1040 (2024) line 17
+personal_exemption: 5600      # MI-1040 (2024) line 9a: "x $5,600"
+
+# PA 4 of 2023 phase-in, year 2 of 4: 50% of the private pension limits, available in
+# 2024 only to filers (oldest spouse) born 1946-1962. Engine applies by age alone.
+retirement_subtraction:
+  cap_single: 32020
+  cap_mfj: 64040
+  min_age: 59.5
+
+senior_standard_deduction:    # Tier 3 (born after 1952, 67+); reduced by exemption AND
+  single: 20000               # taxable SS in 2024 (pre-PA 24 of 2025)
+  mfj: 40000
+  min_age: 67
+
+mesp_529_deduction:           # Schedule 1 line 17
+  single: 5000
+  mfj: 10000
+
+sources:
+  - "2024 MI-1040 form (rate 4.25%; exemption $5,600)"
+  - "Michigan Treasury, 2024 Tier III / Phase-In Subtraction page ('For 2024 those amounts are $32,020 if single or married filing separately, $64,040 if married filing jointly'; 50% of private pension limits; born 1946-1962): https://www.michigan.gov/taxes/iit/tax-guidance/tax-situations/retirement-and-pension-benefits/2024/2024-tier-iii"
+  - "Verified 2026-09-11: figures read from the michigan.gov page in a browser session "

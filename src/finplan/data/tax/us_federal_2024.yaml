@@ -1,0 +1,91 @@
+# US federal tax parameters, TAX YEAR 2024. Values verified against primary sources
+# 2026-09-11 — see `sources` at bottom. Do not edit without a cited source + green
+# golden tests (tests/golden/). Added so filed 2024 returns can be reconciled with
+# `plan tax-year --year 2024`; structure mirrors us_federal_2025.yaml.
+year: 2024
+
+ordinary_brackets:            # Rev. Proc. 2023-34 § 3.01, Tables 1 and 3
+  single:
+    - { upto: 11600, rate: 0.10 }
+    - { upto: 47150, rate: 0.12 }
+    - { upto: 100525, rate: 0.22 }
+    - { upto: 191950, rate: 0.24 }
+    - { upto: 243700, rate: 0.32 }
+    - { upto: 609350, rate: 0.35 }
+    - { upto: null, rate: 0.37 }
+  mfj:
+    - { upto: 23200, rate: 0.10 }
+    - { upto: 94300, rate: 0.12 }
+    - { upto: 201050, rate: 0.22 }
+    - { upto: 383900, rate: 0.24 }
+    - { upto: 487450, rate: 0.32 }
+    - { upto: 731200, rate: 0.35 }
+    - { upto: null, rate: 0.37 }
+
+ltcg_brackets:                # Rev. Proc. 2023-34 § 3.03
+  single:
+    - { upto: 47025, rate: 0.00 }
+    - { upto: 518900, rate: 0.15 }
+    - { upto: null, rate: 0.20 }
+  mfj:
+    - { upto: 94050, rate: 0.00 }
+    - { upto: 583750, rate: 0.15 }
+    - { upto: null, rate: 0.20 }
+
+standard_deduction:           # Rev. Proc. 2023-34 § 3.15 (pre-OBBBA; no senior bonus in 2024)
+  single: 14600
+  mfj: 29200
+  extra_65_single: 1950       # § 63(f): $1,550; $1,950 if unmarried
+  extra_65_mfj: 1550
+
+niit:                         # § 1411; statutory, unindexed
+  rate: 0.038
+  threshold_single: 200000
+  threshold_mfj: 250000
+
+fica:                         # IRS Pub 15 (2024): wage base $168,600
+  ss_rate: 0.062
+  ss_wage_base: 168600
+  medicare_rate: 0.0145
+  addl_medicare:
+    rate: 0.009
+    threshold_single: 200000
+    threshold_mfj: 250000
+
+ss_taxation:                  # Pub 915; statutory, unindexed
+  thresholds_single: [25000, 34000]
+  thresholds_mfj: [32000, 44000]
+
+limits:                       # Notice 2023-75; HSA: Rev. Proc. 2023-23
+  elective_401k: 23000
+  catchup_401k_50: 7500
+  ira: 7000
+  ira_catchup_50: 1000
+  hsa_self: 4150
+  hsa_family: 8300
+  hsa_catchup_55: 1000
+
+penalties:
+  early_withdrawal_rate: 0.10
+
+aca:                          # coverage year 2024: 2023 HHS guidelines (88 FR 3424)
+  fpl:
+    first_person: 14580
+    additional_person: 5140
+  # Rev. Proc. 2023-29 § 3.01 — same enhanced ARPA/IRA table as 2025; no 400% cliff.
+  applicable_pct:
+    - { fpl_from: 0.00, fpl_to: 1.50, pct_from: 0.0000, pct_to: 0.0000 }
+    - { fpl_from: 1.50, fpl_to: 2.00, pct_from: 0.0000, pct_to: 0.0200 }
+    - { fpl_from: 2.00, fpl_to: 2.50, pct_from: 0.0200, pct_to: 0.0400 }
+    - { fpl_from: 2.50, fpl_to: 3.00, pct_from: 0.0400, pct_to: 0.0600 }
+    - { fpl_from: 3.00, fpl_to: 4.00, pct_from: 0.0600, pct_to: 0.0850 }
+  cliff_fpl_ratio: 1000000.0
+
+sources:
+  - "Rev. Proc. 2023-34 (2024 inflation adjustments; brackets, LTCG, standard deduction, aged, 199A): https://www.irs.gov/pub/irs-drop/rp-23-34.pdf"
+  - "Notice 2023-75 (2024 plan limits: 402(g) $23,000; catch-up $7,500; IRA $7,000 / $1,000): https://www.irs.gov/pub/irs-drop/n-23-75.pdf"
+  - "Rev. Proc. 2023-23 (2024 HSA limits $4,150 / $8,300): https://www.irs.gov/pub/irs-drop/rp-23-23.pdf"
+  - "IRS Pub 15 (2024) — SS wage base $168,600: https://www.irs.gov/pub/irs-prior/p15--2024.pdf"
+  - "Rev. Proc. 2023-29 § 3.01 (TY2024 ACA applicable percentage table): https://www.irs.gov/pub/irs-drop/rp-23-29.pdf"
+  - "2023 HHS Poverty Guidelines ($14,580 + $5,140/person): https://aspe.hhs.gov/topics/poverty-economic-mobility/poverty-guidelines/prior-hhs-poverty-guidelines-federal-register-references"
+  - "Verified 2026-09-11 by fetching each document above and reading the figures from its text"
