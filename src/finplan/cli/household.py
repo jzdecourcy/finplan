@@ -186,8 +186,9 @@ def _latest_date_in(path: Path) -> str | None:
         return None
     text = path.read_text(encoding="utf-8", errors="replace")
     text = re.sub(r"<!--.*?-->", "", text, flags=re.S)     # template examples live in comments
-    dates = re.findall(r"\b(20\d{2}-\d{2}-\d{2})\b", text)
-    return max(dates) if dates else None
+    today = dt.date.today().isoformat()
+    dates = [d for d in re.findall(r"\b(20\d{2}-\d{2}-\d{2})\b", text) if d <= today]
+    return max(dates) if dates else None      # entries are dated; prose may cite future dates
 
 
 @click.command()
